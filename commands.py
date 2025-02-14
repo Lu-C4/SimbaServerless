@@ -226,7 +226,7 @@ class PeekSkins(SlashCommand):
         payload = {"content": message, "embeds": embeds}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)    
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins()]
+commands = [CheckPlayerStats(),GetCrosshair(),PeekSkins()]
 
 
 @app.post("/")
