@@ -8,8 +8,9 @@
       { "src": "/(.*)", "dest": "main.py" }
     ],
    
-    "hooks": {
-    "build": "pip install -r requirements.txt && python upsert.py"
-  }
+    "buildCommand": "pip install -r requirements.txt && python upsert.py"
+    
+    
+    
   }
   
