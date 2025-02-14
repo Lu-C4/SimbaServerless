@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request
 from utils import (
     SlashCommand,
     Option,
-    InteractionResponseFlags,
     InteractionResponseType,
     ApplicationCommandOptionType,
 )
@@ -82,48 +81,48 @@ class CheckPlayerStats(SlashCommand):
         }
 
 
-class CheckSurvivalScores(SlashCommand):
-    def __init__(self):
-        super().__init__(
-            name="survivalscores",
-            description="Get Survival highscores of a player by map.",
-            options=[
-                Option(
-                    name="username",
-                    type=ApplicationCommandOptionType.STRING,
-                    description="Username to fetch survival scores for",
-                    required=True,
-                )
-            ],
-        )
+# class CheckSurvivalScores(SlashCommand):
+#     def __init__(self):
+#         super().__init__(
+#             name="survivalscores",
+#             description="Get Survival highscores of a player by map.",
+#             options=[
+#                 Option(
+#                     name="username",
+#                     type=ApplicationCommandOptionType.STRING,
+#                     description="Username to fetch survival scores for",
+#                     required=True,
+#                 )
+#             ],
+#         )
     
-    async def respond(self, json_data: dict):
+#     async def respond(self, json_data: dict):
         
-        username = json_data["data"]["options"][0]["value"]
-        data = getUserData(username)
+#         username = json_data["data"]["options"][0]["value"]
+#         data = getUserData(username)
 
 
-        if not data:
-            return {
-                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                "data": {"content": "Player not found\n*Roars*"},
-            }
+#         if not data:
+#             return {
+#                 "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+#                 "data": {"content": "Player not found\n*Roars*"},
+#             }
 
-        data['field_survival_high_scores'][0]['value'].pop('caption', None)
-        data['field_survival_high_scores'][0]['value'].pop('0', None)
+#         data['field_survival_high_scores'][0]['value'].pop('caption', None)
+#         data['field_survival_high_scores'][0]['value'].pop('0', None)
 
-        # Create an embed
-        sstat = discord.Embed(color=discord.Color.yellow())
+#         # Create an embed
+#         sstat = discord.Embed(color=discord.Color.yellow())
 
-        for value in data['field_survival_high_scores'][0]['value'].values():
-            sstat.add_field(name=value[0], value=value[1], inline=True)
+#         for value in data['field_survival_high_scores'][0]['value'].values():
+#             sstat.add_field(name=value[0], value=value[1], inline=True)
 
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {
-                "embeds": [sstat.to_dict()]  # Correctly nested
-            },
-        }
+#         return {
+#             "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+#             "data": {
+#                 "embeds": [sstat.to_dict()]  
+#             },
+#         }
 
 
 class GetCrosshair(SlashCommand):
