@@ -18,6 +18,31 @@ def getUserData(username):
     if not data:
         return None
     return data[0]
+class ByeCommand(SlashCommand):
+    def __init__(self):
+        super().__init__(
+            name="bye",
+            description="Say bye to someone",
+            options=[
+                Option(
+                    name="user",
+                    type=ApplicationCommandOptionType.USER,
+                    description="The user to say bye",
+                    required=True,
+                ),
+            ],
+        )
+
+    async def respond(self, json_data: dict):
+        # This function is async just so that fastapi supports async poggies
+        user_id = json_data["data"]["options"][0]["value"]
+        return {
+            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            "data": {
+                "content": f"Bye <@!{user_id}>",
+                "flags": InteractionResponseFlags.EPHEMERAL,
+            },
+        }
 
 class CheckPlayerStats(SlashCommand):
     def __init__(self):
@@ -252,7 +277,7 @@ class PeekSkins(SlashCommand):
         payload = {"content": message, "embeds": embeds}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)    
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),HelloCommand()]
+commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),HelloCommand(),ByeCommand()]
 
 
 @app.post("/")
