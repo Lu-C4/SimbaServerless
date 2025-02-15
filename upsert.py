@@ -15,7 +15,7 @@ r = s.send(
     s.prepare_request(
         Request(
             "PUT",
-            'https://discord.com/api/v10/applications/'+APPLICATION_ID+'/commands',
+            f"https://discord.com/api/v10/applications/{APPLICATION_ID}/commands",
             json=[c.to_dict() for c in commands],
         )
     )
