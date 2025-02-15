@@ -4,6 +4,7 @@ from utils import (
     Option,
     InteractionResponseType,
     ApplicationCommandOptionType,
+    InteractionResponseFlags
 )
 import os
 import requests
@@ -80,6 +81,31 @@ class CheckPlayerStats(SlashCommand):
             "data": {"embeds": [image_embed, stats_embed]},
         }
 
+class HelloCommand(SlashCommand):
+    def __init__(self):
+        super().__init__(
+            name="hello",
+            description="Say hello to someone",
+            options=[
+                Option(
+                    name="user",
+                    type=ApplicationCommandOptionType.USER,
+                    description="The user to say hello",
+                    required=True,
+                ),
+            ],
+        )
+
+    async def respond(self, json_data: dict):
+        # This function is async just so that fastapi supports async poggies
+        user_id = json_data["data"]["options"][0]["value"]
+        return {
+            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            "data": {
+                "content": f"Hello <@!{user_id}>",
+                "flags": InteractionResponseFlags.EPHEMERAL,
+            },
+        }
 
 class CheckSurvivalScores(SlashCommand):
     def __init__(self):
@@ -226,7 +252,7 @@ class PeekSkins(SlashCommand):
         payload = {"content": message, "embeds": embeds}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)    
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins()]
+commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),HelloCommand()]
 
 
 @app.post("/")
