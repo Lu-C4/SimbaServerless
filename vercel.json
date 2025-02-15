@@ -1,16 +1,9 @@
 {
-    
-    "builds": [
+  "builds": [
       { "src": "main.py", "use": "@vercel/python" }
-    ],
-   
-    "routes": [
-      { "src": "/(.*)", "dest": "main.py" }
-    ],
-   
-    "buildCommand": "pip install -r requirements.txt && python upsert.py"
-    
-    
-    
-  }
+  ],
   
+  "scripts": {
+      "build": "pip install -r requirements.txt && python upsert.py"
+  }
+}
