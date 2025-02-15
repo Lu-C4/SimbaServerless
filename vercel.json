@@ -1,7 +1,10 @@
 {
+    "scripts": {
+    "build": "python your_script.py && next build"
+  },
     
     "builds": [
-      { "src": "main.py", "use": "@vercel/python" , "buildCommand": "next build"}
+      { "src": "main.py", "use": "@vercel/python" }
     ],
    
     "routes": [
