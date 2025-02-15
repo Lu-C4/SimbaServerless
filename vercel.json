@@ -1,7 +1,8 @@
 {
-    "scripts": {
-    "build": "python your_script.py && next build"
-  },
+  "build": {
+    "env": {
+      "script": "python upsert.py && next build"
+    },
     
     "builds": [
       { "src": "main.py", "use": "@vercel/python" }
