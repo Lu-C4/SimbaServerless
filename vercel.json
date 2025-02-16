@@ -1,16 +1,6 @@
 {
-  
-    
-    "builds": [
-      { "src": "main.py", "use": "@vercel/python" }
-    ],
-   
-    "routes": [
-      { "src": "/(.*)", "dest": "main.py" }
-    ],
-    "buildCommand": "python upsert.py"
-    
-    
-  }
+  "builds": [{ "src": "main.py", "use": "@vercel/python" }],
 
-  
+  "routes": [{ "src": "/(.*)", "dest": "main.py" }],
+  "buildCommand": "python upsert.py"
+}
