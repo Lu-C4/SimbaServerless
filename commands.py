@@ -1,4 +1,7 @@
 from fastapi import FastAPI, Request
+import aiohttp
+from lxml import html
+
 from utils import (
     SlashCommand,
     Option,
@@ -106,6 +109,68 @@ class CheckPlayerStats(SlashCommand):
             "data": {"embeds": [image_embed, stats_embed]},
         }
 
+class GetClanRanking(SlashCommand):
+    def __init__(self):
+        super().__init__(
+            name="cpranking",
+            description="Display the CP rankings of a clan by group ID, defaults to Assassins clan.",
+            options=[
+                Option(
+                    name="groupnumber",
+                    type=ApplicationCommandOptionType.STRING,
+                    description="Clan number to fetch CP Ranking",
+                    required=False,
+                )
+            ],
+        )
+
+    async def defer_response(self, interaction_id, interaction_token):
+        """Send a deferred response to Discord."""
+        url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+        payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
+
+    async def send_followup(self, interaction_token, message, embeds):
+        """Send the follow-up response after processing."""
+        url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
+        payload = {"content": message, "embeds": embeds}
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
+
+    async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        interaction_id = json_data["id"]
+
+        await self.defer_response(interaction_id, interaction_token)
+
+        options = json_data.get("data", {}).get("options", [])
+        group_number = options[0]["value"] if options else "903"  # Default to 903 if not provided
+
+        response = requests.get(f"https://ev.io/group/{group_number}")
+        tree = html.fromstring(response.content)
+        matches = tree.xpath("//td")
+
+        scores = []
+        if not matches:
+            return {
+                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                "data": {"content": "Player not found\n*Roars*"},
+            }
+
+        for i in range(0, len(matches), 4):
+            scores.append({
+                "name": matches[i].text_content().strip() + "." + matches[i + 1].text_content().strip(),
+                "value": matches[i + 2].text_content().strip(),
+                "inline": False,
+            })
+
+        stats_embed = {
+            "color": 16776960,  # Yellow
+            "fields": scores[:5],  # Display only the top 5
+        }
+
+        await self.send_followup(interaction_token, "*Roars*", [stats_embed])        
 class HelloCommand(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -277,7 +342,7 @@ class PeekSkins(SlashCommand):
         payload = {"content": message, "embeds": embeds}
         headers = {"Content-Type": "application/json"}
         requests.post(url, json=payload, headers=headers)    
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),HelloCommand(),ByeCommand()]
+commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking()]
 
 
 @app.post("/")
