@@ -162,7 +162,7 @@ class GetClanRanking(SlashCommand):
             scores.append({
                 "name": matches[i].text_content().strip() + "." + matches[i + 1].text_content().strip(),
                 "value": matches[i + 2].text_content().strip(),
-                "inline": False,
+                "inline": True,
             })
 
         stats_embed = {
