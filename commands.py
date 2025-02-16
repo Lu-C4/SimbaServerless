@@ -167,7 +167,7 @@ class GetClanRanking(SlashCommand):
 
         stats_embed = {
             "color": 16776960,  # Yellow
-            "fields": scores[:5],  # Display only the top 5
+            "fields": scores[:10],  # Display only the top 5
         }
 
         await self.send_followup(interaction_token, "*Roars*", [stats_embed])        
