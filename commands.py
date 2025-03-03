@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Request
-import aiohttp
+# import aiohttp
 from lxml import html
-
+import httpx
 from utils import (
     SlashCommand,
     Option,
     InteractionResponseType,
     ApplicationCommandOptionType,
-    InteractionResponseFlags
+    # InteractionResponseFlags
 )
 import os
 import requests
@@ -15,37 +15,78 @@ from datetime import datetime
 import discord
 
 app = FastAPI()
+# class ByeCommand(SlashCommand):
+#     def __init__(self):
+#         super().__init__(
+#             name="bye",
+#             description="Say bye to someone",
+#             options=[
+#                 Option(
+#                     name="user",
+#                     type=ApplicationCommandOptionType.USER,
+#                     description="The user to say bye",
+#                     required=True,
+#                 ),
+#             ],
+#         )
 
-def getUserData(username):
-    data = requests.get(f"https://ev.io/stats-by-un/{username}").json()
-    if not data:
-        return None
-    return data[0]
-class ByeCommand(SlashCommand):
-    def __init__(self):
-        super().__init__(
-            name="bye",
-            description="Say bye to someone",
-            options=[
-                Option(
-                    name="user",
-                    type=ApplicationCommandOptionType.USER,
-                    description="The user to say bye",
-                    required=True,
-                ),
-            ],
-        )
+#     async def respond(self, json_data: dict):
+#         # This function is async just so that fastapi supports async poggies
+#         user_id = json_data["data"]["options"][0]["value"]
+#         return {
+#             "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+#             "data": {
+#                 "content": f"Bye <@!{user_id}>",
+#                 "flags": InteractionResponseFlags.EPHEMERAL,
+#             },
+#         }
+# class HelloCommand(SlashCommand):
+#     def __init__(self):
+#         super().__init__(
+#             name="hello",
+#             description="Say hello to someone",
+#             options=[
+#                 Option(
+#                     name="user",
+#                     type=ApplicationCommandOptionType.USER,
+#                     description="The user to say hello",
+#                     required=True,
+#                 ),
+#             ],
+#         )
 
-    async def respond(self, json_data: dict):
-        # This function is async just so that fastapi supports async poggies
-        user_id = json_data["data"]["options"][0]["value"]
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {
-                "content": f"Bye <@!{user_id}>",
-                "flags": InteractionResponseFlags.EPHEMERAL,
-            },
-        }
+#     async def respond(self, json_data: dict):
+#         # This function is async just so that fastapi supports async poggies
+#         user_id = json_data["data"]["options"][0]["value"]
+#         return {
+#             "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+#             "data": {
+#                 "content": f"Hello <@!{user_id}>",
+#                 "flags": InteractionResponseFlags.EPHEMERAL,
+#             },
+#         }
+
+async def getUserData(username):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"https://ev.io/stats-by-un/{username}")
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        return data[0] if data else None
+    
+async def defer_response( interaction_id, interaction_token):
+    """Send a deferred response to Discord."""
+    url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+    payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    headers = {"Content-Type": "application/json"}
+    requests.post(url, json=payload, headers=headers)
+
+async def send_followup(interaction_token, message, embeds):
+    """Send the follow-up response after processing."""
+    url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
+    payload = {"content": message, "embeds": embeds}
+    headers = {"Content-Type": "application/json"}
+    requests.post(url, json=payload, headers=headers)
 
 class CheckPlayerStats(SlashCommand):
     def __init__(self):
@@ -63,8 +104,12 @@ class CheckPlayerStats(SlashCommand):
         )
     
     async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        interaction_id = json_data["id"]
+
+        await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
-        data = getUserData(username)
+        data = await getUserData(username)
         
         if not data:
             return {
@@ -72,7 +117,10 @@ class CheckPlayerStats(SlashCommand):
                 "data": {"content": "Player not found\n*Roars*"},
             }
         
-        skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
+        # skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
+        async with httpx.AsyncClient() as client:
+            skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json')
+            skin_data = skin_data.json()
         
         # Parse account creation date
         datetime_string = data["created"][0]["value"]
@@ -104,10 +152,11 @@ class CheckPlayerStats(SlashCommand):
             ]
         }
         
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {"embeds": [image_embed, stats_embed]},
-        }
+        await send_followup(interaction_token=interaction_token, message="*Roars!*",embeds=[image_embed,stats_embed])
+        # return {
+        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        #     "data": {"embeds": [image_embed, stats_embed]},
+        # }
 
 class GetClanRanking(SlashCommand):
     def __init__(self):
@@ -124,30 +173,20 @@ class GetClanRanking(SlashCommand):
             ],
         )
 
-    async def defer_response(self, interaction_id, interaction_token):
-        """Send a deferred response to Discord."""
-        url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
-        payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
 
-    async def send_followup(self, interaction_token, message, embeds):
-        """Send the follow-up response after processing."""
-        url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
-        payload = {"content": message, "embeds": embeds}
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
         interaction_id = json_data["id"]
 
-        await self.defer_response(interaction_id, interaction_token)
+        await defer_response(interaction_id, interaction_token)
 
         options = json_data.get("data", {}).get("options", [])
         group_number = options[0]["value"] if options else "903"  # Default to 903 if not provided
 
-        response = requests.get(f"https://ev.io/group/{group_number}")
+        # response = requests.get(f"https://ev.io/group/{group_number}")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://ev.io/group/{group_number}")
         tree = html.fromstring(response.content)
         matches = tree.xpath("//td")
 
@@ -167,35 +206,10 @@ class GetClanRanking(SlashCommand):
 
         stats_embed = {
             "color": 16776960,  # Yellow
-            "fields": scores[:10],  # Display only the top 5
+            "fields": scores[:15],  
         }
 
-        await self.send_followup(interaction_token, "*Roars*", [stats_embed])        
-class HelloCommand(SlashCommand):
-    def __init__(self):
-        super().__init__(
-            name="hello",
-            description="Say hello to someone",
-            options=[
-                Option(
-                    name="user",
-                    type=ApplicationCommandOptionType.USER,
-                    description="The user to say hello",
-                    required=True,
-                ),
-            ],
-        )
-
-    async def respond(self, json_data: dict):
-        # This function is async just so that fastapi supports async poggies
-        user_id = json_data["data"]["options"][0]["value"]
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {
-                "content": f"Hello <@!{user_id}>",
-                "flags": InteractionResponseFlags.EPHEMERAL,
-            },
-        }
+        await send_followup(interaction_token, "*Roars*", [stats_embed])        
 
 class CheckSurvivalScores(SlashCommand):
     def __init__(self):
@@ -213,9 +227,11 @@ class CheckSurvivalScores(SlashCommand):
         )
     
     async def respond(self, json_data: dict):
-        
+        interaction_token = json_data["token"]
+        interaction_id = json_data["id"]
+        await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
-        data = getUserData(username)
+        data = await getUserData(username)
 
 
         if not data:
@@ -233,12 +249,14 @@ class CheckSurvivalScores(SlashCommand):
         for value in data['field_survival_high_scores'][0]['value'].values():
             sstat.add_field(name=value[0], value=value[1], inline=True)
 
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {
-                "embeds": [sstat.to_dict()]  
-            },
-        }
+
+        await send_followup(interaction_token=interaction_token,embeds=[sstat.to_dict()], message="" )
+        # return {
+        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        #     "data": {
+        #         "embeds": [sstat.to_dict()]  
+        #     },
+        # }
 
 
 class GetCrosshair(SlashCommand):
@@ -257,8 +275,12 @@ class GetCrosshair(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        interaction_id = json_data["id"]
+        await defer_response(interaction_id, interaction_token)
+
         username = json_data["data"]["options"][0]["value"]
-        data = getUserData(username)
+        data =  await getUserData(username)
         
         if not data:
             return {
@@ -272,11 +294,11 @@ class GetCrosshair(SlashCommand):
                 "image": {"url": data["field_custom_crosshair"][0]["url"]},
             }
         ]
-        
-        return {
-            "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {"content": "*Roars*", "embeds": embeds},
-        }
+        await send_followup(message="",interaction_token=interaction_token, embeds=embeds)        
+        # return {
+        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        #     "data": {"content": "*Roars*", "embeds": embeds},
+        # }
 class PeekSkins(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -301,7 +323,7 @@ class PeekSkins(SlashCommand):
         await self.defer_response(interaction_id, interaction_token)
 
         # Process the request (fetch user data)
-        data = getUserData(username)
+        data = await getUserData(username)
 
         # Create embed objects
         skins = [
@@ -316,7 +338,10 @@ class PeekSkins(SlashCommand):
         embeds = []
         for field, name in skins:
             try:
-                skin_data = requests.get(f'https://ev.io{data[field][0]["url"]}?_format=json').json()
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(f'https://ev.io{data[field][0]["url"]}?_format=json')
+                    skin_data = response.json()
+                # skin_data = requests.get(f'https://ev.io{data[field][0]["url"]}?_format=json').json()
                 embed = {
                     "color": 16776960,
                     "image": {"url": skin_data["field_weapon_skin_thumb"][0]["url"]},
