@@ -112,10 +112,8 @@ class CheckPlayerStats(SlashCommand):
         data = await getUserData(username)
         
         if not data:
-            return {
-                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                "data": {"content": "Player not found\n*Roars*"},
-            }
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            return
         
         # skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
         async with httpx.AsyncClient() as client:
@@ -192,10 +190,8 @@ class GetClanRanking(SlashCommand):
 
         scores = []
         if not matches:
-            return {
-                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                "data": {"content": "Player not found\n*Roars*"},
-            }
+            await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roars!*",embeds=[])
+            return
 
         for i in range(0, len(matches), 4):
             scores.append({
@@ -235,10 +231,8 @@ class CheckSurvivalScores(SlashCommand):
 
 
         if not data:
-            return {
-                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                "data": {"content": "Player not found\n*Roars*"},
-            }
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            return
 
         data['field_survival_high_scores'][0]['value'].pop('caption', None)
         data['field_survival_high_scores'][0]['value'].pop('0', None)
@@ -283,10 +277,8 @@ class GetCrosshair(SlashCommand):
         data =  await getUserData(username)
         
         if not data:
-            return {
-                "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                "data": {"content": "Player not found\n*Roars*"},
-            }
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            return
         
         embeds = [
             {
@@ -324,7 +316,9 @@ class PeekSkins(SlashCommand):
 
         # Process the request (fetch user data)
         data = await getUserData(username)
-
+        if not data:
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            return
         # Create embed objects
         skins = [
             ("field_auto_rifle_skin", "Assault Rifle"),
