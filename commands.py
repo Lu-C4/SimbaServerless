@@ -74,12 +74,12 @@ async def getUserData(username):
         data = response.json()
         return data[0] if data else None
     
-async def defer_response( interaction_id, interaction_token):
-    """Send a deferred response to Discord."""
-    url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
-    payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-    headers = {"Content-Type": "application/json"}
-    requests.post(url, json=payload, headers=headers)
+# async def defer_response( interaction_id, interaction_token):
+#     """Send a deferred response to Discord."""
+#     url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+#     payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+#     headers = {"Content-Type": "application/json"}
+#     requests.post(url, json=payload, headers=headers)
 
 async def send_followup(interaction_token, message, embeds):
     """Send the follow-up response after processing."""
@@ -105,9 +105,9 @@ class CheckPlayerStats(SlashCommand):
     
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        interaction_id = json_data["id"]
+        # interaction_id = json_data["id"]
 
-        await defer_response(interaction_id, interaction_token)
+        # await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
         data = await getUserData(username)
         
@@ -177,9 +177,9 @@ class GetClanRanking(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        interaction_id = json_data["id"]
+        # interaction_id = json_data["id"]
 
-        await defer_response(interaction_id, interaction_token)
+        # await defer_response(interaction_id, interaction_token)
 
         options = json_data.get("data", {}).get("options", [])
         group_number = options[0]["value"] if options else "903"  # Default to 903 if not provided
@@ -228,8 +228,8 @@ class CheckSurvivalScores(SlashCommand):
     
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        interaction_id = json_data["id"]
-        await defer_response(interaction_id, interaction_token)
+        # interaction_id = json_data["id"]
+        # await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
         data = await getUserData(username)
 
@@ -276,8 +276,8 @@ class GetCrosshair(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        interaction_id = json_data["id"]
-        await defer_response(interaction_id, interaction_token)
+        # interaction_id = json_data["id"]
+        # await defer_response(interaction_id, interaction_token)
 
         username = json_data["data"]["options"][0]["value"]
         data =  await getUserData(username)
