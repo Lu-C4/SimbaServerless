@@ -1,4 +1,5 @@
 import uvicorn
+import requests
 from fastapi import FastAPI, Request
 from starlette.middleware import Middleware
 from utils import (
@@ -7,7 +8,7 @@ from utils import (
     InteractionResponseFlags,
     CustomHeaderMiddleware,
 )
-from core import CommandHandler
+
 
 app = FastAPI(middleware=[Middleware(CustomHeaderMiddleware)])
 
@@ -19,7 +20,15 @@ async def interactions(request: Request):
     if json_data["type"] == InteractionType.PING:
         # A ping test sent by discord to check if your server works
         return {"type": InteractionResponseType.PONG}
-
+    #defer response assuming it's a command
+    
+    payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    headers = {"Content-Type": "application/json"}
+    interaction_token = json_data["token"]
+    interaction_id = json_data["id"]
+    url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+    requests.post(url, json=payload, headers=headers)
+    from core import CommandHandler
     if json_data["type"] == InteractionType.APPLICATION_COMMAND:
         # We only want to handle slash commands
         handler = CommandHandler(json_data)
