@@ -144,8 +144,14 @@ class CheckPlayerStats(SlashCommand):
                 {"name": "Kills", "value": str(data["field_kills"][0]["value"]), "inline": False},
                 {"name": "Deaths", "value": str(data["field_deaths"][0]["value"]), "inline": False},
                 {"name": "K/D", "value": str(data["field_k_d"][0]["value"]), "inline": False},
-                {"name": "Kills Per Game", "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)), "inline": False},
-                {"name": "Date of account creation", "value": formatted_date, "inline": False},
+                {
+    "name": "Kills Per Game",
+    "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)) 
+             if data["field_total_games"][0]["value"] != 0 else "N/A",
+    "inline": False
+}
+
+                ,{"name": "Date of account creation", "value": formatted_date, "inline": False},
                 {"name": "Days past", "value": str(days_past), "inline": False},
             ]
         }
