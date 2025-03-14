@@ -5,7 +5,6 @@ import httpx
 from utils import (
     SlashCommand,
     Option,
-    InteractionResponseType,
     ApplicationCommandOptionType,
     # InteractionResponseFlags
 )
@@ -348,18 +347,14 @@ class PeekSkins(SlashCommand):
 
     async def respond(self, json_data: dict):
         username = json_data["data"]["options"][0]["value"]
-
-        # Acknowledge the interaction (defer reply)
         interaction_token = json_data["token"]
-        interaction_id = json_data["id"]
-        await self.defer_response(interaction_id, interaction_token)
 
-        # Process the request (fetch user data)
+
         data = await getUserData(username)
         if not data:
             await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
             return
-        # Create embed objects
+
         skins = [
             ("field_auto_rifle_skin", "Assault Rifle"),
             ("field_laser_rifle_skin", "Laser Rifle"),
@@ -386,21 +381,8 @@ class PeekSkins(SlashCommand):
                 print(f"Error fetching {name}: {e}")
 
         # Send the follow-up message
-        await self.send_followup(interaction_token, "*Roars*", embeds)
-
-    async def defer_response(self, interaction_id, interaction_token):
-        """ Send a defer response to Discord """
-        url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
-        payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
-
-    async def send_followup(self, interaction_token, message, embeds):
-        """ Send the follow-up response after processing """
-        url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
-        payload = {"content": message, "embeds": embeds}
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)    
+        await send_followup(interaction_token, "", embeds)
+   
 commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank()]
 
 
