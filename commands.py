@@ -67,7 +67,7 @@ app = FastAPI()
 
 async def getUserData(username):
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"https://ev.io/stats-by-un/{username}")
+        response = await client.get(f"https://ev.io/stats-by-un/{username}", timeout=30)
         if response.status_code != 200:
             return None
         data = response.json()
@@ -116,7 +116,7 @@ class CheckPlayerStats(SlashCommand):
         
         # skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
         async with httpx.AsyncClient() as client:
-            skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json')
+            skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json', timeout=30)
             skin_data = skin_data.json()
         
         # Parse account creation date
@@ -144,11 +144,11 @@ class CheckPlayerStats(SlashCommand):
                 {"name": "Deaths", "value": str(data["field_deaths"][0]["value"]), "inline": False},
                 {"name": "K/D", "value": str(data["field_k_d"][0]["value"]), "inline": False},
                 {
-    "name": "Kills Per Game",
-    "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)) 
-             if data["field_total_games"][0]["value"] != 0 else "N/A",
-    "inline": False
-}
+                    "name": "Kills Per Game",
+                    "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)) 
+                            if data["field_total_games"][0]["value"] != 0 else "N/A",
+                    "inline": False
+                }
 
                 ,{"name": "Date of account creation", "value": formatted_date, "inline": False},
                 {"name": "Days past", "value": str(days_past), "inline": False},
@@ -189,8 +189,8 @@ class GetClanRanking(SlashCommand):
 
         # response = requests.get(f"https://ev.io/group/{group_number}")
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"https://ev.io/group/{group_number}")
-        tree = html.fromstring(response.content)
+            response = await client.get(f"https://ev.io/group/{group_number}", timeout=30)
+        tree =  html.fromstring(response.content)
         matches = tree.xpath("//td")
 
         scores = []
@@ -224,7 +224,7 @@ class GetClanRank(SlashCommand):
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"https://ev.io/clans")
+            response = await client.get(f"https://ev.io/clans", timeout=30)
         tree = html.fromstring(response.content)
         matches = tree.xpath('//td[contains(concat( " ", @class, " " ), concat( " ", "is-active", " " ))] | //*[contains(concat( " ", @class, " " ), concat( " ", "img-responsive", " " ))] | //td//a | //td[contains(concat( " ", @class, " " ), concat( " ", "views-field-counter", " " ))]')
 
@@ -368,7 +368,7 @@ class PeekSkins(SlashCommand):
         for field, name in skins:
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(f'https://ev.io{data[field][0]["url"]}?_format=json')
+                    response = await client.get(f'https://ev.io{data[field][0]["url"]}?_format=json', timeout=30)
                     skin_data = response.json()
                 # skin_data = requests.get(f'https://ev.io{data[field][0]["url"]}?_format=json').json()
                 embed = {

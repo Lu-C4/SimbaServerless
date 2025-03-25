@@ -36,10 +36,6 @@ async def interactions(request: Request):
         if result is not None:
             return result
 
-    # No result means either the command is not found or the command is not registered
-    # Or you havent implemented the command yet
-    # Or you forgot to return the result
-    # Or idk just check it man i cant do everything for you
 
     return {
         "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
