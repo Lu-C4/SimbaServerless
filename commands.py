@@ -479,7 +479,7 @@ class Deploy(SlashCommand):
         
 
         
-        await send_followup(message="Deployed!\nGood luck Soilder.",interaction_token=interaction_token)
+        await send_followup(message="Deployed!\nGood luck Soilder.",interaction_token=interaction_token, embeds=[])
 
    
 commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy()]
