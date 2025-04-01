@@ -382,8 +382,107 @@ class PeekSkins(SlashCommand):
 
         # Send the follow-up message
         await send_followup(interaction_token, "", embeds)
+async def fetch_csrf_tokens(client):
+    """Fetches CSRF tokens required for form submission."""
+    try:
+        response = await client.get("https://ev.io/group/903/edit")
+        response.raise_for_status()
+        
+        tree = html.fromstring(response.text)
+        form_build_id = tree.xpath("//input[@name='form_build_id']/@value")[0]
+        form_token = tree.xpath("//input[@name='form_token']/@value")[0]
+
+        return form_build_id, form_token
+    except Exception as e:
+        print(f"Error fetching CSRF tokens: {e}")
+        return None, None
+async def deploy_new(field_deployed_values):
+    from dotenv import load_dotenv
+    load_dotenv()
+    COOKIES={os.environ.get("KEY") : os.environ.get("VALUE") }
+    """Submits form data asynchronously."""
+    async with httpx.AsyncClient(cookies=COOKIES) as client:
+        form_build_id, form_token = await fetch_csrf_tokens(client)
+        if not form_build_id or not form_token:
+            print("Failed to retrieve CSRF tokens. Aborting.")
+            return
+
+        # Form Data
+        form_data = {
+            "label[0][value]": "The Assassins",
+            "form_build_id": form_build_id,
+            "form_token": form_token,
+            "form_id": "group_clan_edit_form",
+            "field_insignia[0][fids]": "10364",
+            "field_insignia[0][display]": "1",
+            "field_banner[0][fids]": "94990",
+            "field_banner[0][display]": "1",
+            "field_motto[0][value]": "Fear not the darkness, But welcome its Embrace",
+            "field_discord_link[0][uri]": "https://discord.gg/sSGzVXP6Fy",
+            "op": "Save"
+        }
+
+        # Add deployed values dynamically
+        for value in field_deployed_values:
+            form_data[f"field_deployed[{value}]"] = str(value)
+
+        # Convert to multipart
+        files = {key: (None, value) for key, value in form_data.items()}
+
+        try:
+            response = await client.post("https://ev.io/group/903/edit", files=files)
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            print(f"Error submitting form: {e}")
+class Deploy(SlashCommand):
+
+    def __init__(self):
+        super().__init__(
+            name="deploy",
+            description="Deploy yourself!",
+            options=[
+                Option(
+                    name="username",
+                    type=ApplicationCommandOptionType.STRING,
+                    description="Username to deploy",
+                    required=True,
+                )
+            ],
+        )
+
+    async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        # interaction_id = json_data["id"]
+        # await defer_response(interaction_id, interaction_token)
+
+        username = json_data["data"]["options"][0]["value"]
+        data =  await getUserData(username)
+        
+        if not data:
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            return
+        import hashlib
+        
+        if  (hash:=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()) not in data['field_social_bio'][0]['value'] :
+            await send_followup(interaction_token=interaction_token, message=f"Please modify your ev.io social_bio to include {hash}\nhttps://ev.io/user/<your_user_ID>/edit",embeds=[])
+            return
+        
+        cd=requests.get("https://ev.io/group/903?_format=json").json()
+        deployed=[]
+        for element in cd['field_deployed']:
+            deployed.append(element['target_id'])
+        deployed.pop()
+        deployed.insert(0,data["uid"][0]["value"])
+
+        # Run asynchronously
+        await   deploy_new(deployed)
+        
+
+        
+        await send_followup(message="Deployed!\nGood luck Soilder.",interaction_token=interaction_token)
+
    
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank()]
+commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy()]
 
 
 @app.post("/")
