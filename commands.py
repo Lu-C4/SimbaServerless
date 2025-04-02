@@ -462,8 +462,8 @@ class Deploy(SlashCommand):
             await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
             return
         import hashlib
-        
-        if  (hash:=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()) not in data['field_social_bio'][0]['value'] :
+        hash=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()
+        if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
             await send_followup(interaction_token=interaction_token, message=f"Please modify your ev.io social_bio to include {hash}\nhttps://ev.io/user/<your_user_ID>/edit",embeds=[])
             return
         
