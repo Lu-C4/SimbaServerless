@@ -111,7 +111,7 @@ class CheckPlayerStats(SlashCommand):
         data = await getUserData(username)
         
         if not data:
-            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roar?*",embeds=[])
             return
         
         # skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
@@ -128,10 +128,12 @@ class CheckPlayerStats(SlashCommand):
         
         # First embed: Player Image
         image_embed = {
+            "description":f'[**{data["name"][0]["value"]}**](https://ev.io/user/{data["uid"][0]["value"]})',
             "color": 16776960,  # Yellow
-            "fields": [
-                {"name": "Username", "value": data["name"][0]["value"], "inline": False}
-            ],
+            # "title":f'[{data["name"][0]["value"]}](https://ev.io/user/{data["uid"][0]["value"]})',
+            # "fields": [
+            #     {"name": "Username", "value": f'[{data["name"][0]["value"]}](https://ev.io/user/{data["uid"][0]["value"]})', "inline": False}
+            # ],
             "thumbnail": {"url": skin_data["field_profile_thumb"][0]["url"]},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
         }
@@ -155,7 +157,7 @@ class CheckPlayerStats(SlashCommand):
             ]
         }
         
-        await send_followup(interaction_token=interaction_token, message="*Roars!*",embeds=[image_embed,stats_embed])
+        await send_followup(interaction_token=interaction_token, message="",embeds=[image_embed,stats_embed])
         # return {
         #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         #     "data": {"embeds": [image_embed, stats_embed]},
@@ -195,7 +197,7 @@ class GetClanRanking(SlashCommand):
 
         scores = []
         if not matches:
-            await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roar?*",embeds=[])
             return
 
         for i in range(0, len(matches), 4):
@@ -210,7 +212,7 @@ class GetClanRanking(SlashCommand):
             "fields": scores[:15],  
         }
 
-        await send_followup(interaction_token, "*Roars*", [stats_embed])        
+        await send_followup(interaction_token, "", [stats_embed])        
 
 class GetClanRank(SlashCommand):
     def __init__(self):
@@ -270,7 +272,7 @@ class CheckSurvivalScores(SlashCommand):
 
 
         if not data:
-            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roar?*",embeds=[])
             return
 
         data['field_survival_high_scores'][0]['value'].pop('caption', None)
@@ -316,7 +318,7 @@ class GetCrosshair(SlashCommand):
         data =  await getUserData(username)
         
         if not data:
-            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roar?*",embeds=[])
             return
         
         embeds = [
@@ -352,7 +354,7 @@ class PeekSkins(SlashCommand):
 
         data = await getUserData(username)
         if not data:
-            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars?*",embeds=[])
             return
 
         skins = [
@@ -459,7 +461,7 @@ class Deploy(SlashCommand):
         data =  await getUserData(username)
         
         if not data:
-            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roars!*",embeds=[])
+            await send_followup(interaction_token=interaction_token, message="Player not found\n*Roar?*",embeds=[])
             return
         import hashlib
         hash=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()
@@ -479,7 +481,7 @@ class Deploy(SlashCommand):
         
 
         
-        await send_followup(message="Deployed!\nGood luck Soilder.",interaction_token=interaction_token, embeds=[])
+        await send_followup(message="Deployed!\nGood luck Soldier.",interaction_token=interaction_token, embeds=[])
 
    
 commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy()]
