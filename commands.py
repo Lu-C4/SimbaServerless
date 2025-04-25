@@ -184,12 +184,18 @@ class GetClanRanking(SlashCommand):
     def __init__(self):
         super().__init__(
             name="cpranking",
-            description="Display the CP rankings of a clan by group ID, defaults to Assassins clan.",
+            description="Display the CP rankings of a clan by group name or group number, defaults to Assassins clan.",
             options=[
                 Option(
-                    name="group",
+                    name="groupnumber",
                     type=ApplicationCommandOptionType.STRING,
-                    description="Clan name or number to fetch CP Ranking",
+                    description="Clan number to fetch CP Ranking",
+                    required=False,
+                ),
+                Option(
+                    name="clan",
+                    type=ApplicationCommandOptionType.STRING,
+                    description="Name of the clan to fetch CP Ranking",
                     required=False,
                 )
             ],
@@ -234,7 +240,7 @@ class GetClanRanking(SlashCommand):
             response = await client.get(f"https://ev.io/group/{group_number}", timeout=30)
         tree =  html.fromstring(response.content)
         matches = tree.xpath("//td")
-
+        
         if not matches:
             await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roar?*",embeds=[])
             return
@@ -248,8 +254,10 @@ class GetClanRanking(SlashCommand):
             })
 
         stats_embed = {
+            "thumbnail":{"url":"https://ev.io"+tree.xpath('//*[(@id = "block-views-block-clans-block-2")]//*[contains(concat( " ", @class, " " ), concat( " ", "field-content", " " ))]//*[contains(concat( " ", @class, " " ), concat( " ", "img-responsive", " " ))]')[0].attrib['src']},
             "color": 16776960,  # Yellow
-            "fields": scores[:15],  
+            "fields": scores[:15], 
+            "description":f"""[**{tree.xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "page-header", " " ))]')[0].text}**](https://ev.io/group/{group_number})""" 
         }
 
         await send_followup(interaction_token, "", [stats_embed])        
