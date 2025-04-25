@@ -187,9 +187,9 @@ class GetClanRanking(SlashCommand):
             description="Display the CP rankings of a clan by group ID, defaults to Assassins clan.",
             options=[
                 Option(
-                    name="groupnumber",
+                    name="group",
                     type=ApplicationCommandOptionType.STRING,
-                    description="Clan number to fetch CP Ranking",
+                    description="Clan name or number to fetch CP Ranking",
                     required=False,
                 )
             ],
@@ -198,13 +198,36 @@ class GetClanRanking(SlashCommand):
 
 
     async def respond(self, json_data: dict):
+    
+
         interaction_token = json_data["token"]
         # interaction_id = json_data["id"]
 
         # await defer_response(interaction_id, interaction_token)
 
         options = json_data.get("data", {}).get("options", [])
-        group_number = options[0]["value"] if options else "903"  # Default to 903 if not provided
+        group_number = "903"  # Default group number
+        clan_name = None
+
+        if options:
+            option = options[0]
+            if option["name"] == "groupnumber":
+                group_number = option["value"]
+            elif option["name"] == "clan":
+                clan_name = option["value"]
+                async with httpx.AsyncClient() as client:
+                    clans = await client.get("https://ev.io/clans-all3", timeout=30)
+                    clans=clans.json()
+                    found=False
+                    for clan in clans:
+                        if clan["clan_name"]==clan_name:
+                            group_number=clan["cid"]
+                            found=True
+                            break
+                    if not found:
+                        await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roar?*",embeds=[])
+                        return
+
 
         # response = requests.get(f"https://ev.io/group/{group_number}")
         async with httpx.AsyncClient() as client:
