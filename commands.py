@@ -72,7 +72,8 @@ async def getUserData(username):
             return None
         data = response.json()
         return data[0] if data else None
-    
+
+#already deferred in main.py to reduce latency   
 # async def defer_response( interaction_id, interaction_token):
 #     """Send a deferred response to Discord."""
 #     url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
@@ -119,6 +120,20 @@ class CheckPlayerStats(SlashCommand):
             skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json', timeout=30)
             skin_data = skin_data.json()
         
+        UserID=data['uid'][0]['value']
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://ev.io/user/{UserID}", timeout=30)
+        xpa='//*[(@id = "block-views-block-clans-block-4")]//*[contains(concat( " ", @class, " " ), concat( " ", "img-responsive", " " ))]'
+        res=html.fromstring(response.content).xpath(xpa)
+        if res:
+            url=res[0].attrib['src']
+            ClanThumbnail="https://www.ev.io"+url
+        else:
+            ClanThumbnail=skin_data["field_profile_thumb"][0]["url"]
+
+
+        
+        
         # Parse account creation date
         datetime_string = data["created"][0]["value"]
         parsed_datetime = datetime.strptime(datetime_string, '%Y-%m-%dT%H:%M:%S%z')
@@ -134,7 +149,7 @@ class CheckPlayerStats(SlashCommand):
             # "fields": [
             #     {"name": "Username", "value": f'[{data["name"][0]["value"]}](https://ev.io/user/{data["uid"][0]["value"]})', "inline": False}
             # ],
-            "thumbnail": {"url": skin_data["field_profile_thumb"][0]["url"]},
+            "thumbnail": {"url": ClanThumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
         }
         
@@ -195,10 +210,10 @@ class GetClanRanking(SlashCommand):
         tree =  html.fromstring(response.content)
         matches = tree.xpath("//td")
 
-        scores = []
         if not matches:
             await send_followup(interaction_token=interaction_token, message="Clan not found\n*Roar?*",embeds=[])
             return
+        scores = []
 
         for i in range(0, len(matches), 4):
             scores.append({
