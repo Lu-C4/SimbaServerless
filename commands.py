@@ -165,7 +165,9 @@ class CheckPlayerStats(SlashCommand):
                     "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)) 
                             if data["field_total_games"][0]["value"] != 0 else "N/A",
                     "inline": False
-                }
+                },
+                {"name":"CP this week", "value":f'{data["field_cp_earned_weekly"][0]["value"]}'},
+                {"name":"CP all time", "value":f'{data["field_lifetime_cp_earned"][0]["value"]}'}
 
                 ,{"name": "Date of account creation", "value": formatted_date, "inline": False},
                 {"name": "Days past", "value": str(days_past), "inline": False},
