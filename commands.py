@@ -544,8 +544,10 @@ class ClanPlayersStatus(SlashCommand):
 
 
     async def respond(self, json_data: dict):
+        print("GOt the command")
         interaction_token = json_data["token"]
         async def GetClanData():
+            print("Getting Clan Data..........................................")
             import websocket
             import json
 

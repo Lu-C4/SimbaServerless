@@ -6,3 +6,4 @@ PyNaCl
 discord
 lxml
 httpx
+websocket
