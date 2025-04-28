@@ -531,8 +531,89 @@ class Deploy(SlashCommand):
         
         await send_followup(message="Deployed!\nGood luck Soldier.",interaction_token=interaction_token, embeds=[])
 
-   
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy()]
+class ClanPlayersStatus(SlashCommand):
+
+    def __init__(self):
+        super().__init__(
+            name="clanplayersstatus",
+            description="Get a list of online players in The Assasins along with a link to join their game.",
+            options=[
+          
+            ],
+        )
+
+
+    async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        async def GetClanData():
+            import websocket
+            import json
+
+            clan_data_container = {"data": None}  # Use a mutable container
+
+            def on_open(ws):
+                print("WebSocket connection opened.")
+                message = {
+                    "header": "identify",
+                    "uid": int(os.environ.get("UID")),
+                    "id": os.environ.get("ID"),
+                }
+                ws.send(json.dumps(message))
+
+            def on_message(ws, message):
+                data = json.loads(message)
+                if data.get("header") == "clanPlayersAndStatus":
+                    clan_data_container["data"] = data
+                    ws.close()
+
+            def on_close(ws, close_status_code, close_msg):
+                print("WebSocket closed:", close_status_code, close_msg)
+                pass
+
+            def on_error(ws, error):
+                pass
+
+            headers = {
+                "Upgrade": "websocket",
+                "Sec-GPC": "1",
+                "Origin": "https://ev.io",
+                "Cache-Control": "no-cache",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Pragma": "no-cache",
+                "Connection": "Upgrade",
+                "Sec-WebSocket-Key": "KALkq8N0UycMo5tC2MWeZA==",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+                "Sec-WebSocket-Version": "13",
+                "Sec-WebSocket-Extensions": "permessage-deflate; client_max_window_bits"
+            }
+
+            websocket.enableTrace(True)
+            ws = websocket.WebSocketApp(
+                "wss://social.ev.io/",
+                header=[f"{k}: {v}" for k, v in headers.items()],
+                on_open=on_open,
+                on_message=on_message,
+                on_close=on_close,
+                on_error=on_error
+            )
+
+            ws.run_forever()
+            return clan_data_container["data"]
+        
+        
+        message=""
+        OnlinePlayers= await GetClanData()
+        for player in OnlinePlayers['players']:
+            if player['status'].startswith("on") and player['uid'] != int(os.environ.get("UID")):
+
+                message=message+ f"[{player['username']}]({player['gameJoinURL']})\n"
+        if not message:
+            await send_followup(interaction_token=interaction_token, message="No clan mates online!",embeds=[])
+            return
+                
+
+        await send_followup(message=f"Online players:\n{message}",interaction_token=interaction_token, embeds=[])  
+commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus()]
 
 
 @app.post("/")
