@@ -602,13 +602,14 @@ class ClanPlayersStatus(SlashCommand):
             ws.run_forever()
             return clan_data_container["data"]
         
-        
+        UID_= int(os.environ.get("UID"))
         message=""
         OnlinePlayers= await GetClanData()
         for player in OnlinePlayers['players']:
-            if player['status'].startswith("on") and player['uid'] != int(os.environ.get("UID")):
+            if not player['status'].startswith("offline") and player['uid'] != UID_:
 
                 message=message+ f"[{player['username']}]({player['gameJoinURL']})\n"
+        print("message")
         if not message:
             await send_followup(interaction_token=interaction_token, message="No clan mates online!",embeds=[])
             return
