@@ -647,10 +647,11 @@ class SuperDeploy(SlashCommand):
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
         roles=set(json_data['member']['roles'])
-        if roles.intersection({os.environ.get('ALLOWED_ROLES')}):
+
+        if roles.intersection(set(os.environ.get('ALLOWED_ROLES').split(","))):
             pass
         else:
-            payload={"content":"No permission"}
+            payload={"content":"Only members with roles Commander,Lieutenant and Moderator can run this command."}
             await send_followup(interaction_token=interaction_token,payload=payload)
             return
 
@@ -680,8 +681,7 @@ class SuperDeploy(SlashCommand):
                     }
                 ]
                 }
-
-            print("responding")
+            
             await send_followup(interaction_token=interaction_token,payload=payload)
         else:
             cd=requests.get("https://ev.io/group/903?_format=json").json()
