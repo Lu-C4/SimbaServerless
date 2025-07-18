@@ -97,7 +97,6 @@ async def send_followup(interaction_token,payload):
     url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
     headers = {"Content-Type": "application/json"}
     reponse=requests.post(url, json=payload, headers=headers)
-    print(reponse.text)
 class CheckPlayerStats(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -470,16 +469,18 @@ class Deploy(SlashCommand):
         deployed=[]
         for element in cd['field_deployed']:
             deployed.append(element['target_id'])
-        undeployed=deployed.pop()
-        deployed.insert(0,data["uid"][0]["value"])
-
-        # Run asynchronously
         
+        if len(deployed==20):
+            undeployed=deployed.pop()
+            payload = {"content": f"Deployed {username} instead of UID {undeployed}!" }
+        else:
+            payload={"content": f"Deployed {username}!"}
+        
+        deployed.insert(0,data["uid"][0]["value"])
         await   deploy_new(deployed)
         
-
-        payload = {"content": f"Deployed {username} instead of UID {undeployed}!" }
         await send_followup(interaction_token=interaction_token, payload=payload)
+
 class ClanPlayersStatus(SlashCommand):
 
     def __init__(self):
@@ -645,6 +646,14 @@ class SuperDeploy(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
+        roles=set(json_data['member']['roles'])
+        if roles.intersection({os.environ.get('ALLOWED_ROLES')}):
+            pass
+        else:
+            payload={"content":"No permission"}
+            await send_followup(interaction_token=interaction_token,payload=payload)
+            return
+
         username = json_data["data"]["options"][0]["value"]
         DeployedList=await getDeployedList(903)
         if len(DeployedList)==20:
