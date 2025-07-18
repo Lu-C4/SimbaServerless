@@ -1,12 +1,10 @@
-from fastapi import FastAPI, Request
-# import aiohttp
+from fastapi import FastAPI
 from lxml import html
 import httpx
 from utils import (
     SlashCommand,
     Option,
     ApplicationCommandOptionType,
-    # InteractionResponseFlags
 )
 import os
 import requests
@@ -14,56 +12,6 @@ from datetime import datetime
 import discord
 
 app = FastAPI()
-# class ByeCommand(SlashCommand):
-#     def __init__(self):
-#         super().__init__(
-#             name="bye",
-#             description="Say bye to someone",
-#             options=[
-#                 Option(
-#                     name="user",
-#                     type=ApplicationCommandOptionType.USER,
-#                     description="The user to say bye",
-#                     required=True,
-#                 ),
-#             ],
-#         )
-
-#     async def respond(self, json_data: dict):
-#         # This function is async just so that fastapi supports async poggies
-#         user_id = json_data["data"]["options"][0]["value"]
-#         return {
-#             "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-#             "data": {
-#                 "content": f"Bye <@!{user_id}>",
-#                 "flags": InteractionResponseFlags.EPHEMERAL,
-#             },
-#         }
-# class HelloCommand(SlashCommand):
-#     def __init__(self):
-#         super().__init__(
-#             name="hello",
-#             description="Say hello to someone",
-#             options=[
-#                 Option(
-#                     name="user",
-#                     type=ApplicationCommandOptionType.USER,
-#                     description="The user to say hello",
-#                     required=True,
-#                 ),
-#             ],
-#         )
-
-#     async def respond(self, json_data: dict):
-#         # This function is async just so that fastapi supports async poggies
-#         user_id = json_data["data"]["options"][0]["value"]
-#         return {
-#             "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-#             "data": {
-#                 "content": f"Hello <@!{user_id}>",
-#                 "flags": InteractionResponseFlags.EPHEMERAL,
-#             },
-#         }
 
 async def getUserData(username):
     async with httpx.AsyncClient() as client:
@@ -72,21 +20,84 @@ async def getUserData(username):
             return None
         data = response.json()
         return data[0] if data else None
+# async def getUserDataByID(UID):
+#     async with httpx.AsyncClient() as client:
+#         response=await client.get(f"https://ev.io/user/{UID}?_format=json")
+#         if response.status_code != 200:
+#             return None
+#         data = response.json()
+#         return data if data else None
+# async def getUserNameByID(UID):
+#     data= await getUserDataByID(UID)
+#     return data['name'][0]['value']
 
-#already deferred in main.py to reduce latency   
-# async def defer_response( interaction_id, interaction_token):
-#     """Send a deferred response to Discord."""
-#     url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
-#     payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-#     headers = {"Content-Type": "application/json"}
-#     requests.post(url, json=payload, headers=headers)
+async def fetch_csrf_tokens(client):
+    """Fetches CSRF tokens required for form submission."""
+    try:
+        response = await client.get("https://ev.io/group/903/edit")
+        response.raise_for_status()
+        
+        tree = html.fromstring(response.text)
+        form_build_id = tree.xpath("//input[@name='form_build_id']/@value")[0]
+        form_token = tree.xpath("//input[@name='form_token']/@value")[0]
+
+        return form_build_id, form_token
+    except Exception as e:
+        print(f"Error fetching CSRF tokens: {e}")
+        return None, None
+async def deploy_new(field_deployed_values):
+    from dotenv import load_dotenv
+    load_dotenv()
+    COOKIES={os.environ.get("KEY") : os.environ.get("VALUE") }
+    """Submits form data asynchronously."""
+    async with httpx.AsyncClient(cookies=COOKIES) as client:
+        form_build_id, form_token = await fetch_csrf_tokens(client)
+        if not form_build_id or not form_token:
+            print("Failed to retrieve CSRF tokens. Aborting.")
+            return
+
+        # Form Data
+        form_data = {
+            "label[0][value]": "The Assassins",
+            "form_build_id": form_build_id,
+            "form_token": form_token,
+            "form_id": "group_clan_edit_form",
+            "field_insignia[0][fids]": "10364",
+            "field_insignia[0][display]": "1",
+            "field_banner[0][fids]": "94990",
+            "field_banner[0][display]": "1",
+            "field_motto[0][value]": "Fear not the darkness, But welcome its Embrace",
+            "field_discord_link[0][uri]": "https://discord.gg/sSGzVXP6Fy",
+            "op": "Save"
+        }
+
+        # Add deployed values dynamically
+        for value in field_deployed_values:
+            form_data[f"field_deployed[{value}]"] = str(value)
+
+        # Convert to multipart
+        files = {key: (None, value) for key, value in form_data.items()}
+
+        try:
+            response = await client.post("https://ev.io/group/903/edit", files=files)
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            print(f"Error submitting form: {e}")
+
+async def getDeployedList(UID=903):
+    async with httpx.AsyncClient() as client:
+        response=await client.get(f"https://ev.io/group/{UID}/")
+        tree=html.fromstring(response.text)
+        matches=tree.xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "field--label-above", " " ))]')
+        return [match.text_content() for match in matches[0][1]]
+
 
 async def send_followup(interaction_token,payload):
     """Send the follow-up response after processing."""
     url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
     headers = {"Content-Type": "application/json"}
-    requests.post(url, json=payload, headers=headers)
-
+    reponse=requests.post(url, json=payload, headers=headers)
+    print(reponse.text)
 class CheckPlayerStats(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -146,10 +157,6 @@ class CheckPlayerStats(SlashCommand):
         image_embed = {
             "description":f'[**{data["name"][0]["value"]}**](https://ev.io/user/{data["uid"][0]["value"]})',
             "color": 16776960,  # Yellow
-            # "title":f'[{data["name"][0]["value"]}](https://ev.io/user/{data["uid"][0]["value"]})',
-            # "fields": [
-            #     {"name": "Username", "value": f'[{data["name"][0]["value"]}](https://ev.io/user/{data["uid"][0]["value"]})', "inline": False}
-            # ],
             "thumbnail": {"url": ClanThumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
         }
@@ -176,10 +183,6 @@ class CheckPlayerStats(SlashCommand):
         }
         payload = {"embeds": [image_embed, stats_embed]}            
         await send_followup(interaction_token=interaction_token,payload=payload)
-        # return {
-        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        #     "data": {"embeds": [image_embed, stats_embed]},
-        # }
 
 class GetClanRanking(SlashCommand):
     def __init__(self):
@@ -208,9 +211,6 @@ class GetClanRanking(SlashCommand):
     
 
         interaction_token = json_data["token"]
-        # interaction_id = json_data["id"]
-
-        # await defer_response(interaction_id, interaction_token)
 
         options = json_data.get("data", {}).get("options", [])
         group_number = "903"  # Default group number
@@ -237,7 +237,7 @@ class GetClanRanking(SlashCommand):
                         return
 
 
-        # response = requests.get(f"https://ev.io/group/{group_number}")
+
         async with httpx.AsyncClient() as client:
             response = await client.get(f"https://ev.io/group/{group_number}", timeout=30)
         tree =  html.fromstring(response.content)
@@ -316,8 +316,6 @@ class CheckSurvivalScores(SlashCommand):
     
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        # interaction_id = json_data["id"]
-        # await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
         data = await getUserData(username)
 
@@ -340,12 +338,7 @@ class CheckSurvivalScores(SlashCommand):
             "embeds": [sstat.to_dict()]
         }
         await send_followup(interaction_token=interaction_token,payload=payload) 
-        # return {
-        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        #     "data": {
-        #         "embeds": [sstat.to_dict()]  
-        #     },
-        # }
+
 
 
 class GetCrosshair(SlashCommand):
@@ -365,9 +358,6 @@ class GetCrosshair(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        # interaction_id = json_data["id"]
-        # await defer_response(interaction_id, interaction_token)
-
         username = json_data["data"]["options"][0]["value"]
         data =  await getUserData(username)
         
@@ -389,10 +379,7 @@ class GetCrosshair(SlashCommand):
             "embeds": embeds
         }
         await send_followup(payload=payload,interaction_token=interaction_token)        
-        # return {
-        #     "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        #     "data": {"content": "*Roars*", "embeds": embeds},
-        # }
+
 class PeekSkins(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -434,7 +421,6 @@ class PeekSkins(SlashCommand):
                 async with httpx.AsyncClient() as client:
                     response = await client.get(f'https://ev.io{data[field][0]["url"]}?_format=json', timeout=30)
                     skin_data = response.json()
-                # skin_data = requests.get(f'https://ev.io{data[field][0]["url"]}?_format=json').json()
                 embed = {
                     "color": 16776960,
                     "image": {"url": skin_data["field_weapon_skin_thumb"][0]["url"]},
@@ -444,68 +430,15 @@ class PeekSkins(SlashCommand):
             except Exception as e:
                 print(f"Error fetching {name}: {e}")
 
-        # Send the follow-up message
         payload = {
             "embeds": embeds
         }
         await send_followup(interaction_token,payload=payload)
-async def fetch_csrf_tokens(client):
-    """Fetches CSRF tokens required for form submission."""
-    try:
-        response = await client.get("https://ev.io/group/903/edit")
-        response.raise_for_status()
-        
-        tree = html.fromstring(response.text)
-        form_build_id = tree.xpath("//input[@name='form_build_id']/@value")[0]
-        form_token = tree.xpath("//input[@name='form_token']/@value")[0]
-
-        return form_build_id, form_token
-    except Exception as e:
-        print(f"Error fetching CSRF tokens: {e}")
-        return None, None
-async def deploy_new(field_deployed_values):
-    from dotenv import load_dotenv
-    load_dotenv()
-    COOKIES={os.environ.get("KEY") : os.environ.get("VALUE") }
-    """Submits form data asynchronously."""
-    async with httpx.AsyncClient(cookies=COOKIES) as client:
-        form_build_id, form_token = await fetch_csrf_tokens(client)
-        if not form_build_id or not form_token:
-            print("Failed to retrieve CSRF tokens. Aborting.")
-            return
-
-        # Form Data
-        form_data = {
-            "label[0][value]": "The Assassins",
-            "form_build_id": form_build_id,
-            "form_token": form_token,
-            "form_id": "group_clan_edit_form",
-            "field_insignia[0][fids]": "10364",
-            "field_insignia[0][display]": "1",
-            "field_banner[0][fids]": "94990",
-            "field_banner[0][display]": "1",
-            "field_motto[0][value]": "Fear not the darkness, But welcome its Embrace",
-            "field_discord_link[0][uri]": "https://discord.gg/sSGzVXP6Fy",
-            "op": "Save"
-        }
-
-        # Add deployed values dynamically
-        for value in field_deployed_values:
-            form_data[f"field_deployed[{value}]"] = str(value)
-
-        # Convert to multipart
-        files = {key: (None, value) for key, value in form_data.items()}
-
-        try:
-            response = await client.post("https://ev.io/group/903/edit", files=files)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            print(f"Error submitting form: {e}")
 class Deploy(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="deploy",
+            name="self_deploy",
             description="Deploy yourself!",
             options=[
                 Option(
@@ -519,9 +452,6 @@ class Deploy(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        # interaction_id = json_data["id"]
-        # await defer_response(interaction_id, interaction_token)
-
         username = json_data["data"]["options"][0]["value"]
         data =  await getUserData(username)
         
@@ -540,14 +470,15 @@ class Deploy(SlashCommand):
         deployed=[]
         for element in cd['field_deployed']:
             deployed.append(element['target_id'])
-        deployed.pop()
+        undeployed=deployed.pop()
         deployed.insert(0,data["uid"][0]["value"])
 
         # Run asynchronously
+        
         await   deploy_new(deployed)
         
 
-        payload = {"content": f"Deployed {username}!" }
+        payload = {"content": f"Deployed {username} instead of UID {undeployed}!" }
         await send_followup(interaction_token=interaction_token, payload=payload)
 class ClanPlayersStatus(SlashCommand):
 
@@ -567,7 +498,7 @@ class ClanPlayersStatus(SlashCommand):
             import websocket
             import json
 
-            clan_data_container = {"data": None}  # Use a mutable container
+            clan_data_container = {"data": None} 
 
             def on_open(ws):
                 print("WebSocket connection opened.")
@@ -653,7 +584,6 @@ class LobbyLinks(SlashCommand):
         message2=""
 
 
-        import httpx
         import re
         import json
 
@@ -698,18 +628,67 @@ class LobbyLinks(SlashCommand):
         await send_followup(interaction_token=interaction_token,payload=payload) 
         await send_followup(interaction_token=interaction_token,payload=payload2)
 
+class SuperDeploy(SlashCommand):
+    def __init__(self):
+        super().__init__(
+            name="deploy",
+            description="Deploy a player.",
+            options=[
+                Option(
+                    name="username",
+                    type=ApplicationCommandOptionType.STRING,
+                    description="Username to deploy",
+                    required=True,
+                )
+            ]
+        )
+
+    async def respond(self, json_data: dict):
+        interaction_token = json_data["token"]
+        username = json_data["data"]["options"][0]["value"]
+        DeployedList=await getDeployedList(903)
+        if len(DeployedList)==20:
+            options=[]
+            for player in DeployedList:
+                options.append({"label":player,"value":player})
+                
+            payload = {
+                "custom_id":"special_id",
+                "content": f"Deploying:{username}",
+                "components": [
+                    {
+                    "type": 1,
+                    "components": [
+                        {
+                        "type": 3,
+                        "custom_id": "deploy",
+                        "placeholder": "Choose a player to be undeployed:",
+                        "min_values": 1,
+                        "max_values": 1,
+                        "options": options
+                        }
+                    ]
+                    }
+                ]
+                }
+
+            print("responding")
+            await send_followup(interaction_token=interaction_token,payload=payload)
+        else:
+            cd=requests.get("https://ev.io/group/903?_format=json").json()
+            deployed=[]
+            for element in cd['field_deployed']:
+                deployed.append(element['target_id'])
+            
+            UserData=await getUserData(username=username)
+            UserID= UserData['uid'][0]['value']
+            deployed.insert(0,UserID)
+            await   deploy_new(deployed)
+
+            payload={"content":f"Deployed {username}"} 
+
+            await send_followup(interaction_token=interaction_token, payload=payload)
 
 
-commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus(),LobbyLinks()]
+commands = [SuperDeploy(),CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus(),LobbyLinks()]
 
-
-@app.post("/")
-async def handle_interaction(request: Request):
-    data = await request.json()
-    command_name = data.get("data", {}).get("name")
-    
-    for command in commands:
-        if command.name == command_name:
-            return await command.respond(data)
-    
-    return {"error": "Unknown command"}

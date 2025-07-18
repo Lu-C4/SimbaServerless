@@ -73,3 +73,11 @@ class SlashCommand:
             "description": self.description,
             "options": [option.to_dict() for option in self.options],
         }
+
+class ComponentResponse:
+    def __init__(self, name: str):
+        self.name = name
+        
+    async def respond(self, json_data: dict):
+        # This function is async just so that fastapi supports async poggies
+        ...

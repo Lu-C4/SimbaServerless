@@ -35,8 +35,11 @@ async def interactions(request: Request):
         result = await handler.execute()
         if result is not None:
             return result
-
-
+  
+    if json_data['type']==InteractionType.MESSAGE_COMPONENT:
+        from core import ComponentHandler
+        handler=ComponentHandler(json_data)
+        result= await handler.execute()
     return {
         "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         "data": {
