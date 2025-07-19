@@ -5,4 +5,4 @@ PyNaCl
 discord
 lxml
 httpx
-websocket-client
+websockets

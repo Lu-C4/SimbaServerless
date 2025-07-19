@@ -1,6 +1,6 @@
 import httpx
 
-async def getUserData(username):
+async def getUserData(username:str):
     
     async with httpx.AsyncClient() as client:
         response = await client.get(f"https://ev.io/stats-by-un/{username}", timeout=30)
@@ -25,7 +25,16 @@ async def fetch_csrf_tokens(client):
         print(f"Error fetching CSRF tokens: {e}")
         return None, None
     
-async def deploy_new(field_deployed_values):
+async def deploy_new(field_deployed_values:list):
+    """
+    Deploys players from a list of UIDs, assumes KEY and VALUE are the env variables 
+    for the cookies required to make the changes.
+    Form data is hardcoded into the function
+    
+    :param field_deployed_values: list of UIDS
+    :return: True if successful, False if not.
+    :rtype: bool
+    """
     import os
     from dotenv import load_dotenv
     
@@ -37,7 +46,7 @@ async def deploy_new(field_deployed_values):
         form_build_id, form_token = await fetch_csrf_tokens(client)
         if not form_build_id or not form_token:
             print("Failed to retrieve CSRF tokens. Aborting.")
-            return None
+            return False
 
         # Form Data
         form_data = {
@@ -67,8 +76,8 @@ async def deploy_new(field_deployed_values):
         except httpx.HTTPError as e:
             if response.status_code!=303:
                 print(f"Error submitting form: {e}")
-                return None
-    return True
+                return False
+        return True
 
 async def getDeployedList(UID=903):
     """Get list of USERNAMES of deployed members in a clan by it's UID"""
