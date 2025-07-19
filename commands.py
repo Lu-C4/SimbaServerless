@@ -7,96 +7,28 @@ from utils import (
     ApplicationCommandOptionType,
 )
 import os
-import requests
 from datetime import datetime
 import discord
 
+from ev import getUserData,deploy_new,getDeployedList,getUserNameByID
+
 app = FastAPI()
 
-async def getUserData(username):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"https://ev.io/stats-by-un/{username}", timeout=30)
-        if response.status_code != 200:
-            return None
-        data = response.json()
-        return data[0] if data else None
-# async def getUserDataByID(UID):
-#     async with httpx.AsyncClient() as client:
-#         response=await client.get(f"https://ev.io/user/{UID}?_format=json")
-#         if response.status_code != 200:
-#             return None
-#         data = response.json()
-#         return data if data else None
-# async def getUserNameByID(UID):
-#     data= await getUserDataByID(UID)
-#     return data['name'][0]['value']
 
-async def fetch_csrf_tokens(client):
-    """Fetches CSRF tokens required for form submission."""
-    try:
-        response = await client.get("https://ev.io/group/903/edit")
-        response.raise_for_status()
-        
-        tree = html.fromstring(response.text)
-        form_build_id = tree.xpath("//input[@name='form_build_id']/@value")[0]
-        form_token = tree.xpath("//input[@name='form_token']/@value")[0]
 
-        return form_build_id, form_token
-    except Exception as e:
-        print(f"Error fetching CSRF tokens: {e}")
-        return None, None
-async def deploy_new(field_deployed_values):
-    from dotenv import load_dotenv
-    load_dotenv()
-    COOKIES={os.environ.get("KEY") : os.environ.get("VALUE") }
-    """Submits form data asynchronously."""
-    async with httpx.AsyncClient(cookies=COOKIES) as client:
-        form_build_id, form_token = await fetch_csrf_tokens(client)
-        if not form_build_id or not form_token:
-            print("Failed to retrieve CSRF tokens. Aborting.")
-            return
 
-        # Form Data
-        form_data = {
-            "label[0][value]": "The Assassins",
-            "form_build_id": form_build_id,
-            "form_token": form_token,
-            "form_id": "group_clan_edit_form",
-            "field_insignia[0][fids]": "10364",
-            "field_insignia[0][display]": "1",
-            "field_banner[0][fids]": "94990",
-            "field_banner[0][display]": "1",
-            "field_motto[0][value]": "Fear not the darkness, But welcome its Embrace",
-            "field_discord_link[0][uri]": "https://discord.gg/sSGzVXP6Fy",
-            "op": "Save"
-        }
-
-        # Add deployed values dynamically
-        for value in field_deployed_values:
-            form_data[f"field_deployed[{value}]"] = str(value)
-
-        # Convert to multipart
-        files = {key: (None, value) for key, value in form_data.items()}
-
-        try:
-            response = await client.post("https://ev.io/group/903/edit", files=files)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            print(f"Error submitting form: {e}")
-
-async def getDeployedList(UID=903):
-    async with httpx.AsyncClient() as client:
-        response=await client.get(f"https://ev.io/group/{UID}/")
-        tree=html.fromstring(response.text)
-        matches=tree.xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "field--label-above", " " ))]')
-        return [match.text_content() for match in matches[0][1]]
 
 
 async def send_followup(interaction_token,payload):
     """Send the follow-up response after processing."""
     url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
     headers = {"Content-Type": "application/json"}
-    reponse=requests.post(url, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload, headers=headers)
+    if response.status_code!=200:
+        print(response.text)
+
+
 class CheckPlayerStats(SlashCommand):
     def __init__(self):
         super().__init__(
@@ -114,9 +46,6 @@ class CheckPlayerStats(SlashCommand):
     
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        # interaction_id = json_data["id"]
-
-        # await defer_response(interaction_id, interaction_token)
         username = json_data["data"]["options"][0]["value"]
         data = await getUserData(username)
         
@@ -125,8 +54,6 @@ class CheckPlayerStats(SlashCommand):
             payload = {"content": "Player not found\n*Roar?*"}
             await send_followup(interaction_token=interaction_token,payload=payload)
             return
-        
-        # skin_data = requests.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json').json()
         async with httpx.AsyncClient() as client:
             skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json', timeout=30)
             skin_data = skin_data.json()
@@ -464,15 +391,15 @@ class Deploy(SlashCommand):
             payload = {"content": f"Please modify your ev.io social_bio to include {hash}\nhttps://ev.io/user/<your_user_ID>/edit"}
             await send_followup(interaction_token=interaction_token, payload=payload)
             return
-        
-        cd=requests.get("https://ev.io/group/903?_format=json").json()
+        from ev import getClanData
+        cd= await getClanData()
         deployed=[]
         for element in cd['field_deployed']:
             deployed.append(element['target_id'])
         
         if len(deployed==20):
             undeployed=deployed.pop()
-            payload = {"content": f"Deployed {username} instead of UID {undeployed}!" }
+            payload = {"content": f"Deployed {username} instead of UID {getUserNameByID(undeployed)}!" }
         else:
             payload={"content": f"Deployed {username}!"}
         
@@ -495,60 +422,33 @@ class ClanPlayersStatus(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
+        import websockets
+        import json
         async def GetClanData():
-            import websocket
-            import json
+            """Connect to WebSocket and retrieve clan player data."""
+            uri = "wss://social.ev.io/"
+            headers = {
+                "Origin": "https://ev.io",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+            }
 
-            clan_data_container = {"data": None} 
+            async with websockets.connect(uri, additional_headers=headers) as websocket_conn:
 
-            def on_open(ws):
-                print("WebSocket connection opened.")
-                message = {
+                identify_msg = {
                     "header": "identify",
                     "uid": int(os.environ.get("UID")),
                     "id": os.environ.get("ID"),
                 }
-                ws.send(json.dumps(message))
+                await websocket_conn.send(json.dumps(identify_msg))
 
-            def on_message(ws, message):
-                data = json.loads(message)
-                if data.get("header") == "clanPlayersAndStatus":
-                    clan_data_container["data"] = data
-                    ws.close()
 
-            def on_close(ws, close_status_code, close_msg):
-                print("WebSocket closed:", close_status_code, close_msg)
-                pass
+                while True:
+                    msg = await websocket_conn.recv()
+                    data = json.loads(msg)
 
-            def on_error(ws, error):
-                pass
-
-            headers = {
-                "Upgrade": "websocket",
-                "Sec-GPC": "1",
-                "Origin": "https://ev.io",
-                "Cache-Control": "no-cache",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Pragma": "no-cache",
-                "Connection": "Upgrade",
-                "Sec-WebSocket-Key": "KALkq8N0UycMo5tC2MWeZA==",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-                "Sec-WebSocket-Version": "13",
-                "Sec-WebSocket-Extensions": "permessage-deflate; client_max_window_bits"
-            }
-
-            websocket.enableTrace(True)
-            ws = websocket.WebSocketApp(
-                "wss://social.ev.io/",
-                header=[f"{k}: {v}" for k, v in headers.items()],
-                on_open=on_open,
-                on_message=on_message,
-                on_close=on_close,
-                on_error=on_error
-            )
-
-            ws.run_forever()
-            return clan_data_container["data"]
+                    if data.get("header") == "clanPlayersAndStatus":
+                        return data
         
         UID_= int(os.environ.get("UID"))
         message=""
@@ -646,6 +546,14 @@ class SuperDeploy(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
+        
+        username = json_data["data"]["options"][0]["value"]
+        UserData=await getUserData(username=username)
+        if not UserData:
+            payload={"content":"Player not found!"}
+            await send_followup(interaction_token=interaction_token,payload=payload)
+            return
+        
         roles=set(json_data['member']['roles'])
 
         if roles.intersection(set(os.environ.get('ALLOWED_ROLES').split(","))):
@@ -655,16 +563,37 @@ class SuperDeploy(SlashCommand):
             await send_followup(interaction_token=interaction_token,payload=payload)
             return
 
-        username = json_data["data"]["options"][0]["value"]
         DeployedList=await getDeployedList(903)
+
         if len(DeployedList)==20:
             options=[]
             for player in DeployedList:
                 options.append({"label":player,"value":player})
                 
             payload = {
-                "custom_id":"special_id",
-                "content": f"Deploying:{username}",
+                "content": "",
+                "embeds":[
+                    {
+                    "title": "Deployer ID",
+                    "description": json_data["member"]["user"]["id"],
+                    "color": 65280,
+                    
+                  
+                    "author": {
+                        "name": json_data["member"]["user"]["username"],
+                        
+                        "icon_url": f'https://cdn.discordapp.com/avatars/{json_data["member"]["user"]["id"]}/{json_data["member"]["user"]["avatar"]}.png'
+                    },
+                    
+                    "fields": [
+                        {
+                        "name": "Deploying",
+                        "value": username,
+                        "inline": "true"
+                        }
+                    ]
+                    }
+                ],
                 "components": [
                     {
                     "type": 1,
@@ -681,22 +610,24 @@ class SuperDeploy(SlashCommand):
                     }
                 ]
                 }
-            
-            await send_followup(interaction_token=interaction_token,payload=payload)
+         
         else:
-            cd=requests.get("https://ev.io/group/903?_format=json").json()
+            from ev import getClanData
+            cd=await getClanData()
             deployed=[]
             for element in cd['field_deployed']:
                 deployed.append(element['target_id'])
             
-            UserData=await getUserData(username=username)
             UserID= UserData['uid'][0]['value']
             deployed.insert(0,UserID)
-            await   deploy_new(deployed)
+            status=await   deploy_new(deployed)
+            if not status:
+                payload={"content":"Whoops! That did not work, try again."}
+                
+            else:
+                payload={"content":f"Deployed {username}"} 
 
-            payload={"content":f"Deployed {username}"} 
-
-            await send_followup(interaction_token=interaction_token, payload=payload)
+        await send_followup(interaction_token=interaction_token, payload=payload)
 
 
 commands = [SuperDeploy(),CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus(),LobbyLinks()]

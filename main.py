@@ -1,5 +1,5 @@
 import uvicorn
-import requests
+import httpx
 from fastapi import FastAPI, Request
 from starlette.middleware import Middleware
 from utils import (
@@ -16,7 +16,6 @@ app = FastAPI(middleware=[Middleware(CustomHeaderMiddleware)])
 @app.post("/interactions")
 async def interactions(request: Request):
     json_data = await request.json()
-
     if json_data["type"] == InteractionType.PING:
         # A ping test sent by discord to check if your server works
         return {"type": InteractionResponseType.PONG}
@@ -27,7 +26,8 @@ async def interactions(request: Request):
     interaction_token = json_data["token"]
     interaction_id = json_data["id"]
     url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
-    requests.post(url, json=payload, headers=headers)
+    async with httpx.AsyncClient() as client:
+        await client.post(url, json=payload, headers=headers)
     from core import CommandHandler
     if json_data["type"] == InteractionType.APPLICATION_COMMAND:
         # We only want to handle slash commands
