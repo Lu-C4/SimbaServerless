@@ -397,14 +397,19 @@ class Deploy(SlashCommand):
         for element in cd['field_deployed']:
             deployed.append(element['target_id'])
         
-        if len(deployed==20):
+        if len(deployed)==20:
             undeployed=deployed.pop()
-            payload = {"content": f"Deployed {username} instead of UID {getUserNameByID(undeployed)}!" }
+            payload = {"content": f"Deployed **{username}** instead of  **{ await getUserNameByID(undeployed)}**!" }
         else:
             payload={"content": f"Deployed {username}!"}
         
         deployed.insert(0,data["uid"][0]["value"])
-        await   deploy_new(deployed)
+        
+        status = await deploy_new(deployed)
+        
+        if not status:
+            payload={"content":"Whoops! That did not work!\nTry again or contact a Commander , Lieutenant or a Moderator and ask them to use /deploy"}
+            
         
         await send_followup(interaction_token=interaction_token, payload=payload)
 
