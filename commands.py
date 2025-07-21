@@ -360,6 +360,7 @@ class PeekSkins(SlashCommand):
             "embeds": embeds
         }
         await send_followup(interaction_token,payload=payload)
+        
 class Deploy(SlashCommand):
 
     def __init__(self):
