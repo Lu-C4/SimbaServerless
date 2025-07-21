@@ -495,7 +495,8 @@ class LobbyLinks(SlashCommand):
 
         url = "https://ev.io/dist/1-7-0/public/bundle.js"
 
-        response = httpx.get(url, timeout=10)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
         raw_text = response.text
         match = re.search(r'(\[\s*\{"id":"lobby-.*?\}\s*])', raw_text, re.DOTALL)
         json_str = match.group(1)

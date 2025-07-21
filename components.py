@@ -8,7 +8,7 @@ async def edit_original_response( interaction_token: str, message_id: str, paylo
     "Content-Type": "application/json"
     }
 
-   with httpx.Client() as client:
+   async with httpx.AsyncClient() as client:
         response = client.patch(url, headers=headers, json=payload)
 
         if response.status_code != 200:
