@@ -295,15 +295,30 @@ class GetCrosshair(SlashCommand):
             payload = {"content": "Player has no custom crosshair\n*Roar?*"}
             await send_followup(interaction_token=interaction_token, payload=payload)
             return
-        embeds = [
-            {
-                "color": 16776960,  # Yellow
-                "image": {"url": data["field_custom_crosshair"][0]["url"]},
-            }
-        ]
         payload = {
-            "embeds": embeds
+            "embeds": [
+                {
+                    "color": 16776960,
+                    "image": {
+                        "url": data["field_custom_crosshair"][0]["url"]
+                    },
+                }
+            ],
+            "components": [
+                {
+                    "type": 1,  # Action row
+                    "components": [
+                        {
+                            "type": 2,  # Button
+                            "style": 5,  # Link style
+                            "label": "Download",
+                            "url": data["field_custom_crosshair"][0]["url"]
+                        }
+                    ]
+                }
+            ]
         }
+
         await send_followup(payload=payload,interaction_token=interaction_token)        
 
 class PeekSkins(SlashCommand):
