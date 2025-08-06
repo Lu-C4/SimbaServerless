@@ -81,10 +81,12 @@ class CheckPlayerStats(SlashCommand):
         
         # First embed: Player Image
         image_embed = {
-            "description":f'[**{data["name"][0]["value"]}**](https://ev.io/user/{data["uid"][0]["value"]})',
+            "title":f'**{data["name"][0]["value"]}**',
+            "url":f'https://ev.io/user/{data["uid"][0]["value"]}',
             "color": 16776960,  # Yellow
             "thumbnail": {"url": ClanThumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
+            "description":f'[View skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})'
         }
         
         # Second embed: Player Stats
@@ -100,10 +102,11 @@ class CheckPlayerStats(SlashCommand):
                             if data["field_total_games"][0]["value"] != 0 else "N/A",
                     "inline": False
                 },
-                {"name":"CP this week", "value":f'{data["field_cp_earned_weekly"][0]["value"]}'},
-                {"name":"CP all time", "value":f'{data["field_lifetime_cp_earned"][0]["value"]}'}
+                {"name":"CP earned this week", "value":f'{data["field_cp_earned_weekly"][0]["value"]}'},
+                {"name":"CP earned all time", "value":f'{data["field_lifetime_cp_earned"][0]["value"]}'},
+                {"name":"Weekly score","value":f'{data["field_weekly_score"][0]["value"]}'},
 
-                ,{"name": "Date of account creation", "value": formatted_date, "inline": False},
+                {"name": "Date of account creation", "value": formatted_date, "inline": False},
                 {"name": "Days past", "value": str(days_past), "inline": False},
             ]
         }
