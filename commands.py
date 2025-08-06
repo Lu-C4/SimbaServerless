@@ -48,70 +48,82 @@ class CheckPlayerStats(SlashCommand):
         interaction_token = json_data["token"]
         username = json_data["data"]["options"][0]["value"]
         data = await getUserData(username)
-        
+
         if not data:
-            
-            payload = {"content": "Player not found\n*Roar?*"}
-            await send_followup(interaction_token=interaction_token,payload=payload)
+            payload = {"content": "⚠️ Player not found\n*Roar?*"}
+            await send_followup(interaction_token=interaction_token, payload=payload)
             return
-        async with httpx.AsyncClient() as client:
-            skin_data = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json', timeout=30)
-            skin_data = skin_data.json()
-        
-        UserID=data['uid'][0]['value']
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"https://ev.io/user/{UserID}", timeout=30)
-        xpa='//*[(@id = "block-views-block-clans-block-4")]//*[contains(concat( " ", @class, " " ), concat( " ", "img-responsive", " " ))]'
-        res=html.fromstring(response.content).xpath(xpa)
-        if res:
-            url=res[0].attrib['src']
-            ClanThumbnail="https://www.ev.io"+url
-        else:
-            ClanThumbnail=skin_data["field_profile_thumb"][0]["url"]
 
+        async with httpx.AsyncClient() as client:
+            skin_response = await client.get(f'https://ev.io/node/{data["field_eq_skin"][0]["target_id"]}?_format=json', timeout=30)
+            skin_data = skin_response.json()
 
-        
-        
-        # Parse account creation date
-        datetime_string = data["created"][0]["value"]
-        parsed_datetime = datetime.strptime(datetime_string, '%Y-%m-%dT%H:%M:%S%z')
-        current_datetime = datetime.now(parsed_datetime.tzinfo)
-        days_past = (current_datetime - parsed_datetime).days
-        formatted_date = parsed_datetime.strftime('%d/%m/%Y')
-        
-        # First embed: Player Image
+        user_id = data['uid'][0]['value']
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://ev.io/user/{user_id}", timeout=30)
+
+        xpa = '//*[(@id = "block-views-block-clans-block-4")]//*[contains(concat(" ", @class, " "), " img-responsive ")]'
+        res = html.fromstring(response.content).xpath(xpa)
+
+        clan_thumbnail = f'https://www.ev.io{res[0].attrib["src"]}' if res else skin_data["field_profile_thumb"][0]["url"]
+
+        # Parse creation and last seen dates
+        created_dt = datetime.strptime(data["created"][0]["value"], '%Y-%m-%dT%H:%M:%S%z')
+        last_seen_dt = datetime.strptime(data["changed"][0]["value"], '%Y-%m-%dT%H:%M:%S%z')
+
+        days_past = (datetime.now(created_dt.tzinfo) - created_dt).days
+        formatted_created = created_dt.strftime('%d %b %Y')
+        formatted_last_seen = last_seen_dt.strftime('%d %b %Y %H:%M UTC')
+
+        # First Embed: Player and Skin
         image_embed = {
-            "title":f'**{data["name"][0]["value"]}**',
-            "url":f'https://ev.io/user/{data["uid"][0]["value"]}',
-            "color": 16776960,  # Yellow
-            "thumbnail": {"url": ClanThumbnail},
+            "title": f'🏹 **{data["name"][0]["value"]}**',
+            "url": f'https://ev.io/user/{user_id}',
+            "color": 0xF1C40F,
+            "thumbnail": {"url": clan_thumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
-            "description":f'[View skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})'
+            "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})'
         }
-        
-        # Second embed: Player Stats
-        stats_embed = {
-            "color": 16776960,  # Yellow
-            "fields": [
-                {"name": "Kills", "value": str(data["field_kills"][0]["value"]), "inline": False},
-                {"name": "Deaths", "value": str(data["field_deaths"][0]["value"]), "inline": False},
-                {"name": "K/D", "value": str(data["field_k_d"][0]["value"]), "inline": False},
-                {
-                    "name": "Kills Per Game",
-                    "value": str(round(data["field_kills"][0]["value"] / data["field_total_games"][0]["value"], 2)) 
-                            if data["field_total_games"][0]["value"] != 0 else "N/A",
-                    "inline": False
-                },
-                {"name":"CP earned this week", "value":f'{data["field_cp_earned_weekly"][0]["value"]}'},
-                {"name":"CP earned all time", "value":f'{data["field_lifetime_cp_earned"][0]["value"]}'},
-                {"name":"Weekly score","value":f'{data["field_weekly_score"][0]["value"]}'},
 
-                {"name": "Date of account creation", "value": formatted_date, "inline": False},
-                {"name": "Days past", "value": str(days_past), "inline": False},
-            ]
+        # Gather player stats
+        kills = data["field_kills"][0]["value"]
+        deaths = data["field_deaths"][0]["value"]
+        kd_ratio = data["field_k_d"][0]["value"]
+        total_games = data.get("field_total_games", [{"value": 0}])[0]["value"]
+        kpg = round(kills / total_games, 2) if total_games else "N/A"
+
+        e_balance = data["field_ev_coins"][0]["value"]
+        weekly_e = data["field_ev_coins_this_week"][0]["value"]
+        rank = data.get("field_rank", [{"value": "N/A"}])[0]["value"]
+
+        # Second Embed: Stats
+        stats_embed = {
+            "title": "📊 Stats Overview",
+            "color": 0xF1C40F,
+"fields": [
+    {"name": "🔫 Kills", "value": f"**{kills}**", "inline": True},
+    {"name": "💀 Deaths", "value": f"**{deaths}**", "inline": True},
+    {"name": "📈 K/D Ratio", "value": f"**{kd_ratio}**", "inline": True},
+
+    {"name": "🎮 Games Played", "value": f"**{total_games}**", "inline": True},
+    {"name": "🔥 Kills/Game", "value": f"**{kpg}**", "inline": True},
+
+    {"name": "🛡️ CP (Weekly)", "value": f"**{data['field_cp_earned_weekly'][0]['value']}**", "inline": True},
+    {"name": "🪙 e balance", "value": f"**{e_balance} e**", "inline": True},
+    {"name": "🪙 e earned this week", "value": f"**{weekly_e} e**", "inline": True},
+
+    {"name": "🏅 Rank", "value": f"**#{rank}**", "inline": True},
+    {"name": "📅 Account Created", "value": f"**{formatted_created}**", "inline": True},
+    {"name": "⏳ Days Since", "value": f"**{days_past}**", "inline": True},
+    {"name": "🟢 Last Seen", "value": f"**{formatted_last_seen}**", "inline": False},
+]
+
         }
-        payload = {"embeds": [image_embed, stats_embed]}            
-        await send_followup(interaction_token=interaction_token,payload=payload)
+
+        payload = {"embeds": [image_embed, stats_embed]}
+        await send_followup(interaction_token=interaction_token, payload=payload)
+
+
 
 class GetClanRanking(SlashCommand):
     def __init__(self):
