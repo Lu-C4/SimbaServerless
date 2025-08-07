@@ -77,7 +77,7 @@ class CheckPlayerStats(SlashCommand):
 
         # First Embed: Player and Skin
         image_embed = {
-            "title": f'🏹 **{data["name"][0]["value"]}**',
+            "title": f'**{data["name"][0]["value"]}**',
             "url": f'https://ev.io/user/{user_id}',
             "color": 0xF1C40F,
             "thumbnail": {"url": clan_thumbnail},
@@ -380,7 +380,9 @@ class PeekSkins(SlashCommand):
                 embed = {
                     "color": 16776960,
                     "image": {"url": skin_data["field_weapon_skin_thumb"][0]["url"]},
-                    "description": f'[{name}](https://ev.io{data[field][0]["url"]})'
+                    "description": f'[View skin 🔍](https://luc4-evskinviewer.vercel.app/?nid={data[field][0]["target_id"]})',
+                    "title":name,
+                    "url":f'https://ev.io{data[field][0]["url"]}'
                 }
                 embeds.append(embed)
             except Exception as e:
