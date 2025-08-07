@@ -85,38 +85,46 @@ class CheckPlayerStats(SlashCommand):
             "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})'
         }
 
-        # Gather player stats
-        kills = data["field_kills"][0]["value"]
-        deaths = data["field_deaths"][0]["value"]
-        kd_ratio = data["field_k_d"][0]["value"]
-        total_games = data.get("field_total_games", [{"value": 0}])[0]["value"]
+        def get_value(data, key, default=0):
+            """Safely get value from a field list like [{'value': X}] or return default."""
+            field = data.get(key, [])
+            return field[0]["value"] if field else default
+
+        kills = get_value(data, "field_kills", 0)
+        deaths = get_value(data, "field_deaths", 0)
+        kd_ratio = get_value(data, "field_k_d", "0.00")
+        total_games = get_value(data, "field_total_games", 0)
         kpg = round(kills / total_games, 2) if total_games else "N/A"
 
-        e_balance = data["field_ev_coins"][0]["value"]
-        weekly_e = data["field_ev_coins_this_week"][0]["value"]
-        rank = data.get("field_rank", [{"value": "N/A"}])[0]["value"]
+        e_balance = get_value(data, "field_ev_coins", 0)
+        weekly_e = get_value(data, "field_ev_coins_this_week", 0)
+        rank = get_value(data, "field_rank", "N/A")
+
+
+        
+        
 
         # Second Embed: Stats
         stats_embed = {
             "title": "📊 Stats Overview",
             "color": 0xF1C40F,
-"fields": [
-    {"name": "🔫 Kills", "value": f"**{kills}**", "inline": True},
-    {"name": "💀 Deaths", "value": f"**{deaths}**", "inline": True},
-    {"name": "📈 K/D Ratio", "value": f"**{kd_ratio}**", "inline": True},
+        "fields": [
+            {"name": "🔫 Kills", "value": f"**{kills}**", "inline": True},
+            {"name": "💀 Deaths", "value": f"**{deaths}**", "inline": True},
+            {"name": "📈 K/D Ratio", "value": f"**{kd_ratio}**", "inline": True},
 
-    {"name": "🎮 Games Played", "value": f"**{total_games}**", "inline": True},
-    {"name": "🔥 Kills/Game", "value": f"**{kpg}**", "inline": True},
+            {"name": "🎮 Games Played", "value": f"**{total_games}**", "inline": True},
+            {"name": "🔥 Kills/Game", "value": f"**{kpg}**", "inline": True},
 
-    {"name": "🛡️ CP (Weekly)", "value": f"**{data['field_cp_earned_weekly'][0]['value']}**", "inline": True},
-    {"name": "🪙 e balance", "value": f"**{e_balance} e**", "inline": True},
-    {"name": "🪙 e earned this week", "value": f"**{weekly_e} e**", "inline": True},
+            {"name": "🛡️ CP (Weekly)", "value": f"**{data['field_cp_earned_weekly'][0]['value']}**", "inline": True},
+            {"name": "🪙 e balance", "value": f"**{e_balance} e**", "inline": True},
+            {"name": "🪙 e earned this week", "value": f"**{weekly_e} e**", "inline": True},
 
-    {"name": "🏅 Rank", "value": f"**#{rank}**", "inline": True},
-    {"name": "📅 Account Created", "value": f"**{formatted_created}**", "inline": True},
-    {"name": "⏳ Days Since", "value": f"**{days_past}**", "inline": True},
-    {"name": "🟢 Last Seen", "value": f"**{formatted_last_seen}**", "inline": False},
-]
+            {"name": "🏅 Rank", "value": f"**#{rank}**", "inline": True},
+            {"name": "📅 Account Created", "value": f"**{formatted_created}**", "inline": True},
+            {"name": "⏳ Days Since", "value": f"**{days_past}**", "inline": True},
+            {"name": "🟢 Last Seen", "value": f"**{formatted_last_seen}**", "inline": False},
+            ]
 
         }
 
