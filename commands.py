@@ -47,7 +47,7 @@ class CheckPlayerStats(SlashCommand):
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
         username = json_data["data"]["options"][0]["value"]
-        data = await getUserData(username)
+        data = await getUserData(username)  
 
         if not data:
             payload = {"content": "⚠️ Player not found\n*Roar?*"}
@@ -82,7 +82,7 @@ class CheckPlayerStats(SlashCommand):
             "color": 0xF1C40F,
             "thumbnail": {"url": clan_thumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
-            "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})'
+            "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})\n[📈 More Stats](https://ev-lobby.vercel.app/?username={username})'
         }
 
         def get_value(data, key, default=0):
