@@ -11,6 +11,7 @@ from datetime import datetime
 import discord
 
 from ev import getUserData,deploy_new,getDeployedList,getUserNameByID
+from urllib.parse import quote
 
 app = FastAPI()
 
@@ -82,7 +83,7 @@ class CheckPlayerStats(SlashCommand):
             "color": 0xF1C40F,
             "thumbnail": {"url": clan_thumbnail},
             "image": {"url": skin_data["field_large_thumb"][0]["url"]},
-            "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})\n[📈 More Stats](https://ev-lobby.vercel.app/?username={username})'
+            "description": f'[🔍 View Skin](https://luc4-evskinviewer.vercel.app/?nid={data["field_eq_skin"][0]["target_id"]})\n[📈 More Stats](https://ev-lobby.vercel.app/?username={quote(username)})'
         }
 
         def get_value(data, key, default=0):
