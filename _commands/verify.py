@@ -49,68 +49,72 @@ class Verify(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
-        if "member" in json_data:
-            discordUid = int(json_data["member"]["user"]["id"])
-        elif "user" in json_data:
-            discordUid = int(json_data["user"]["id"])
-        interaction_token = json_data["token"]
-        username = json_data["data"]["options"][0]["value"]
-        data =  await getUserData(username)
-        
-        if not data:
-            payload = {"content": "Player not found\n*Roar?*"}
-            await send_followup(interaction_token=interaction_token, payload=payload)
-            return
-        
-        
-        import hashlib
-        hash=hashlib.sha256(f'{discordUid}Samael{username}'.encode()).hexdigest()
-        if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
-        
-            with open("tmp\\1.png", "rb") as f:
-                a_bytes = f.read()
-
-            with open("tmp\\2.png", "rb") as f:
-                b_bytes = f.read()
-
-            payload = {
-                "content": (
-                    f"## 🔐 Temporary Verification Required\n"
-                    f"Your unique verification hash is:\n"
-                    f"```\n{hash}\n```\n"
-                    f"### 📋 What You Need To Do\n"
-                    f"Please update your **ev.io** social bio to include the line:\n"
-                    f"`hash = {hash}`\n\n"
-                    f"### 🛠️ How To Update\n"
-                    f"1. Go to **https://ev.io/user**\n"
-                    f"2. Click the **Edit** button\n"
-                    f"3. Scroll down to the **social_bio** field\n"
-                    f"4. Paste the following code anywhere in the bio (You can change it back to whatever you wish once the verification is complete.):\n"
-                    f"```\nhash = {hash}\n```\n"
-                    f"5. Scroll further down and click **Save**\n\n"
-                    
-                ),
-                "attachments": [
-                    {"id": 0, "filename": "a.png"},
-                    {"id": 1, "filename": "b.jpg"}
-                ]
-            }
-
-
-            files_dict = {
-                0: ("a.png", a_bytes, "image/png"),
-                1: ("b.jpg", b_bytes, "image/jpeg")
-            }
-
-            await send_followup(interaction_token, payload, files_dict)
-
-            return
-        
-        discord_username=json_data["member"]["user"]["username"]
+        print("Responding")
         try:
-            await add_verified_user(username,discordUid,discord_username)
-            payload = {"content": f"You are Verie"}
-        except Exception as e :
-            payload={"content":"Error During verification, perhaps the account is already linked."}
+            if "member" in json_data:
+                discordUid = int(json_data["member"]["user"]["id"])
+            elif "user" in json_data:
+                discordUid = int(json_data["user"]["id"])
+            interaction_token = json_data["token"]
+            username = json_data["data"]["options"][0]["value"]
+            data =  await getUserData(username)
             
-        await send_followup(interaction_token=interaction_token, payload=payload)
+            if not data:
+                payload = {"content": "Player not found\n*Roar?*"}
+                await send_followup(interaction_token=interaction_token, payload=payload)
+                return
+            
+            
+            import hashlib
+            hash=hashlib.sha256(f'{discordUid}Samael{username}'.encode()).hexdigest()
+            if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
+            
+                with open("tmp\\1.png", "rb") as f:
+                    a_bytes = f.read()
+
+                with open("tmp\\2.png", "rb") as f:
+                    b_bytes = f.read()
+
+                payload = {
+                    "content": (
+                        f"## 🔐 Temporary Verification Required\n"
+                        f"Your unique verification hash is:\n"
+                        f"```\n{hash}\n```\n"
+                        f"### 📋 What You Need To Do\n"
+                        f"Please update your **ev.io** social bio to include the line:\n"
+                        f"`hash = {hash}`\n\n"
+                        f"### 🛠️ How To Update\n"
+                        f"1. Go to **https://ev.io/user**\n"
+                        f"2. Click the **Edit** button\n"
+                        f"3. Scroll down to the **social_bio** field\n"
+                        f"4. Paste the following code anywhere in the bio (You can change it back to whatever you wish once the verification is complete.):\n"
+                        f"```\nhash = {hash}\n```\n"
+                        f"5. Scroll further down and click **Save**\n\n"
+                        
+                    ),
+                    "attachments": [
+                        {"id": 0, "filename": "a.png"},
+                        {"id": 1, "filename": "b.jpg"}
+                    ]
+                }
+
+
+                files_dict = {
+                    0: ("a.png", a_bytes, "image/png"),
+                    1: ("b.jpg", b_bytes, "image/jpeg")
+                }
+
+                await send_followup(interaction_token, payload, files_dict)
+
+                return
+            
+            discord_username=json_data["member"]["user"]["username"]
+            try:
+                await add_verified_user(username,discordUid,discord_username)
+                payload = {"content": f"You are Verie"}
+            except Exception as e :
+                payload={"content":"Error During verification, perhaps the account is already linked."}
+                
+            await send_followup(interaction_token=interaction_token, payload=payload)
+        except Exception as e:
+            print(e)
