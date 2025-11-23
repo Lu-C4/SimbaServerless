@@ -60,7 +60,11 @@ class Verify(SlashCommand):
         
         
         import hashlib
-        hash=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()
+        if "member" in json_data:
+            discordUid = int(json_data["member"]["user"]["id"])
+        elif "user" in json_data:
+            discordUid = int(json_data["user"]["id"])
+        hash=hashlib.sha256(f'{discordUID}Samael{username}'.encode()).hexdigest()
         if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
         
             with open("tmp\\1.png", "rb") as f:
