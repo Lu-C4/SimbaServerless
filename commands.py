@@ -9,7 +9,8 @@ from _commands.deploy import Deploy
 from _commands.clan_player_status import ClanPlayersStatus
 from _commands.lobby_links import LobbyLinks
 from _commands.super_deploy import SuperDeploy
+from _commands.verify import Verify
 
 
-commands = [SuperDeploy(),CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus(),LobbyLinks()]
+commands = [SuperDeploy(),CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(), Deploy(),ClanPlayersStatus(),LobbyLinks(),Verify()]
 

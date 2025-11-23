@@ -1,10 +1,25 @@
 import httpx
 import os
-async def send_followup(interaction_token,payload):
-    """Send the follow-up response after processing."""
-    url = f"https://discord.com/api/v10/webhooks/{os.environ.get('APPLICATION_ID')}/{interaction_token}"
-    headers = {"Content-Type": "application/json"}
+import json
+
+async def send_followup(interaction_token, payload, files_dict=None):
+    """
+    payload: dict for normal JSON (content, embeds, attachments)
+    files_dict: {0: (filename, bytes, mime), 1: (...), ...}
+    """
+    url = f"https://discord.com/api/v10/webhooks/{os.environ['APPLICATION_ID']}/{interaction_token}"
+
+    if not files_dict:
+        async with httpx.AsyncClient() as client:
+            return await client.post(url, json=payload)
+
+    # Build multipart/form-data
+    form = {
+        "payload_json": (None, json.dumps(payload), "application/json")
+    }
+
+    for file_id, (filename, file_bytes, mime) in files_dict.items():
+        form[f"files[{file_id}]"] = (filename, file_bytes, mime)
+
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
-    if response.status_code!=200:
-        print(response.text)
+        return await client.post(url, files=form)
