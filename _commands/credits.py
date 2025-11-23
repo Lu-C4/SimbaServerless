@@ -21,6 +21,7 @@ async def getCredits(discord_uid: int) -> str | None:
     Returns the number of credits for a given Discord UID.
     Returns None if no matching user is found.
     """
+    
     response = (
         supabase
         .table("credits")
@@ -46,21 +47,24 @@ class Credits(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
-        if "member" in json_data:
-            discordUID = int(json_data["member"]["user"]["id"])
-        elif "user" in json_data:
-            discordUID = int(json_data["user"]["id"])
-        interaction_token = json_data["token"]
-        
-        credits = await getCredits(discordUID)
-        
-        if not credits:
-            payload={"content":f"You have not earned any credits,use /collectbounty to earn some! 🤑."}
-            await send_followup(interaction_token=interaction_token, payload=payload)
-            return
-        
-        else:
-            payload={"content":f"You have {credits} credits! 🤑."}
-            await send_followup(interaction_token=interaction_token, payload=payload)
-            return
-        
+        try:
+            
+            if "member" in json_data:
+                discordUID = int(json_data["member"]["user"]["id"])
+            elif "user" in json_data:
+                discordUID = int(json_data["user"]["id"])
+            interaction_token = json_data["token"]
+            
+            credits = await getCredits(discordUID)
+            
+            if not credits:
+                payload={"content":f"You have not earned any credits,use /collectbounty to earn some! 🤑."}
+                await send_followup(interaction_token=interaction_token, payload=payload)
+                return
+            
+            else:
+                payload={"content":f"You have {credits} credits! 🤑."}
+                await send_followup(interaction_token=interaction_token, payload=payload)
+                return
+        except Exception as e:
+            print(e)
