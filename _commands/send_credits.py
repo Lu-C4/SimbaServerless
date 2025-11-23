@@ -66,7 +66,12 @@ class SendCredits(SlashCommand):
 
     async def respond(self, json_data: dict):
         interaction_token = json_data["token"]
-        sender_uid = int(json_data["member"]["user"]["id"])
+        if "member" in json_data:
+            sender_uid = int(json_data["member"]["user"]["id"])
+        elif "user" in json_data:
+            sender_uid = int(json_data["user"]["id"])
+        
+        
         options = {opt["name"]: opt["value"] for opt in json_data["data"]["options"]}
 
         recipient_uid = int(options["recipient"])

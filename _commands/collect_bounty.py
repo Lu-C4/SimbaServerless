@@ -45,8 +45,12 @@ class CollectBounty(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
+        if "member" in json_data:
+            discordUID = int(json_data["member"]["user"]["id"])
+        elif "user" in json_data:
+            discordUID = int(json_data["user"]["id"])
         interaction_token = json_data["token"]
-        discordUID=json_data["member"]["user"]["id"]
+        
         evUserName= await getEvUsername(discordUID)
         
         if not evUserName:
