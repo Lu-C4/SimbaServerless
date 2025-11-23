@@ -32,6 +32,8 @@ async def getCredits(discord_uid: int) -> str | None:
     )
     print(response)
 
+    if not response:
+        return None
     if response.data:
         return response.data.get("credits")
 
