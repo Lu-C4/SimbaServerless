@@ -75,7 +75,7 @@ class CollectBounty(SlashCommand):
         new_credits=result.data[0]['updated_credits']
         
         if result.data[0]['was_incremented']:
-            payload={"content":f"You collected {result.data[0]['earned']} credits 🤑!\nYou now Have {new_credits} credits 💵."}
+            payload={"content":f"You collected {result.data[0]['earned']} credits 🤑!\nYou now have {new_credits} credits 💵."}
             await send_followup(interaction_token=interaction_token, payload=payload)
             return
         else:

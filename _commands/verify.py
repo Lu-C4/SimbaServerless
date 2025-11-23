@@ -63,10 +63,10 @@ class Verify(SlashCommand):
         hash=hashlib.sha256(f'{json_data["member"]["user"]["id"]}Samael{username}'.encode()).hexdigest()
         if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
         
-            with open("images\\1.png", "rb") as f:
+            with open("tmp\\1.png", "rb") as f:
                 a_bytes = f.read()
 
-            with open("images\\2.png", "rb") as f:
+            with open("tmp\\2.png", "rb") as f:
                 b_bytes = f.read()
 
             payload = {
