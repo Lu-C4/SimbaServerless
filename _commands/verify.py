@@ -111,7 +111,7 @@ class Verify(SlashCommand):
             discord_username=json_data["member"]["user"]["username"]
             try:
                 await add_verified_user(username,discordUid,discord_username)
-                payload = {"content": f"You are Verie"}
+                payload = {"content": f"You are verified successfully!"}
             except Exception as e :
                 payload={"content":"Error During verification, perhaps the account is already linked."}
                 
