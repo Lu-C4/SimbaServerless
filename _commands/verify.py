@@ -49,6 +49,10 @@ class Verify(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
+        if "member" in json_data:
+            discordUid = int(json_data["member"]["user"]["id"])
+        elif "user" in json_data:
+            discordUid = int(json_data["user"]["id"])
         interaction_token = json_data["token"]
         username = json_data["data"]["options"][0]["value"]
         data =  await getUserData(username)
@@ -60,11 +64,7 @@ class Verify(SlashCommand):
         
         
         import hashlib
-        if "member" in json_data:
-            discordUid = int(json_data["member"]["user"]["id"])
-        elif "user" in json_data:
-            discordUid = int(json_data["user"]["id"])
-        hash=hashlib.sha256(f'{discordUID}Samael{username}'.encode()).hexdigest()
+        hash=hashlib.sha256(f'{discordUid}Samael{username}'.encode()).hexdigest()
         if  not (data['field_social_bio']) or  (hash) not in data['field_social_bio'][0]['value'] :
         
             with open("tmp\\1.png", "rb") as f:
@@ -106,10 +106,9 @@ class Verify(SlashCommand):
 
             return
         
-        discordUID=json_data["member"]["user"]["id"]
         discord_username=json_data["member"]["user"]["username"]
         try:
-            await add_verified_user(username,discordUID,discord_username)
+            await add_verified_user(username,discordUid,discord_username)
             payload = {"content": f"You are Verie"}
         except Exception as e :
             payload={"content":"Error During verification, perhaps the account is already linked."}
