@@ -87,21 +87,22 @@ class Verify(SlashCommand):
                         f"1. Go to **https://ev.io/user**\n"
                         f"2. Click the **Edit** button\n"
                         f"3. Scroll down to the **social_bio** field\n"
-                        f"4. Paste the following code anywhere in the bio (You can change it back to whatever you wish once the verification is complete.):\n"
+                        f"4. Paste the following code anywhere in the bio (You can change it back to whatever you wish once the verification is complete):\n"
                         f"```\nhash = {hash}\n```\n"
                         f"5. Scroll further down and click **Save**\n\n"
+                        f"6. Run this command again.\n\n"
                         
                     ),
                     "attachments": [
                         {"id": 0, "filename": "a.png"},
-                        {"id": 1, "filename": "b.jpg"}
+                        {"id": 1, "filename": "b.png"}
                     ]
                 }
 
 
                 files_dict = {
                     0: ("a.png", a_bytes, "image/png"),
-                    1: ("b.jpg", b_bytes, "image/jpeg")
+                    1: ("b.png", b_bytes, "image/png")
                 }
 
                 await send_followup(interaction_token, payload, files_dict)

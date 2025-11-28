@@ -29,6 +29,8 @@ async def getEvUsername(discord_uid: int) -> str | None:
         .maybe_single()
         .execute()
     )
+    if not response:
+        return None
 
     if response.data:
         return response.data.get("ev_username")
