@@ -22,6 +22,7 @@ class SuperDeploy(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
+        print("Respondingggggggg")
         interaction_token = json_data["token"]
         
         username = json_data["data"]["options"][0]["value"]
@@ -104,4 +105,6 @@ class SuperDeploy(SlashCommand):
             else:
                 payload={"content":f"Deployed {username}"} 
 
+        print("Sending response back",payload)
         await send_followup(interaction_token=interaction_token, payload=payload)
+        

@@ -16,4 +16,4 @@ from _commands.send_credits import SendCredits
 
 
 commands = [CheckPlayerStats(),CheckSurvivalScores(),GetCrosshair(),PeekSkins(),GetClanRanking(),GetClanRank(),ClanPlayersStatus(),LobbyLinks(),Verify(),CollectBounty(),Credits(),SendCredits()]
-# commands.extend([SuperDeploy(),Deploy()])
+commands.extend([SuperDeploy(),Deploy()])
