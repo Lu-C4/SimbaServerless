@@ -59,7 +59,7 @@ async def deploy_new(field_deployed_values:list):
             "field_banner[0][fids]": "94990",
             "field_banner[0][display]": "1",
             "field_motto[0][value]": "Fear not the darkness, But welcome its Embrace",
-            "field_discord_link[0][uri]": "https://discord.gg/sSGzVXP6Fy",
+            "field_discord_link[0][uri]": "https://discord.gg/qDgwWGRQ",
             "op": "Save"
         }
 

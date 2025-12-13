@@ -1,7 +1,9 @@
 import uvicorn
+import asyncio
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from starlette.middleware import Middleware
+
 from utils import (
     InteractionType,
     InteractionResponseType,
@@ -9,43 +11,67 @@ from utils import (
     CustomHeaderMiddleware,
 )
 
-
 app = FastAPI(middleware=[Middleware(CustomHeaderMiddleware)])
 
 
-@app.post("/interactions")
-async def interactions(request: Request):
-    json_data = await request.json()
-    if json_data["type"] == InteractionType.PING:
-        # A ping test sent by discord to check if your server works
-        return {"type": InteractionResponseType.PONG}
-    #defer response assuming it's a command
-    
-    payload = {"type": 5}  # 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-    headers = {"Content-Type": "application/json"}
+async def process_interaction(json_data: dict):
+    """
+    Runs AFTER the interaction has been ACKed.
+    Sends responses using webhook follow-ups.
+    """
     interaction_token = json_data["token"]
-    interaction_id = json_data["id"]
-    url = f"https://discord.com/api/v10/interactions/{interaction_id}/{interaction_token}/callback"
+    application_id = json_data["application_id"]
+
+    webhook_url = (
+        f"https://discord.com/api/v10/webhooks/"
+        f"{application_id}/{interaction_token}"
+    )
+
+    result = None  
+
     async with httpx.AsyncClient() as client:
-        await client.post(url, json=payload, headers=headers)
-    from core import CommandHandler
-    if json_data["type"] == InteractionType.APPLICATION_COMMAND:
-        # We only want to handle slash commands
-        handler = CommandHandler(json_data)
-        result = await handler.execute()
-        if result is not None:
-            return result
-  
-    if json_data['type']==InteractionType.MESSAGE_COMPONENT:
-        from core import ComponentHandler
-        handler=ComponentHandler(json_data)
-        result= await handler.execute()
+
+        # Slash commands
+        if json_data["type"] == InteractionType.APPLICATION_COMMAND:
+            from core import CommandHandler
+
+            handler = CommandHandler(json_data)
+            result = await handler.execute()
+
+        # Message components (buttons, selects)
+        elif json_data["type"] == InteractionType.MESSAGE_COMPONENT:
+            from core import ComponentHandler
+
+            handler = ComponentHandler(json_data)
+            result = await handler.execute()
+
+        # Send handler result if present
+        if result:
+            await client.post(webhook_url, json=result)
+        else:
+            # Fallback message
+            await client.post(
+                webhook_url,
+                json={
+                    "content": "Hmmm, I am not programmed to respond to that.The command could be temporarily disabled.",
+                    "flags": InteractionResponseFlags.EPHEMERAL,
+                },
+            )
+
+
+@app.post("/interactions")
+async def interactions(request: Request, background: BackgroundTasks):
+    json_data = await request.json()
+
+    # 1️⃣ PING — respond immediately
+    if json_data["type"] == InteractionType.PING:
+        return {"type": InteractionResponseType.PONG}
+
+    # 2️⃣ ACK immediately (DEFER)
+    background.add_task(process_interaction, json_data)
+
     return {
-        "type": InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        "data": {
-            "content": "Hello Buddy, This is a by default message for any unrecognized interaction.",
-            "flags": InteractionResponseFlags.EPHEMERAL,
-        },
+        "type": InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     }
 
 

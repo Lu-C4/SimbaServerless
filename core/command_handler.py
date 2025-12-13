@@ -15,6 +15,6 @@ class CommandHandler:
     async def execute(self):
         command = get_command(self.json_data)
         if command is None:
-            return None
-        result = await command.respond(self.json_data)
-        return result
+            return False
+        await command.respond(self.json_data)
+        return True
