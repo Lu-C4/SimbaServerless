@@ -1,0 +1,39 @@
+name: Send Hi Every Minute
+
+on:
+  schedule:
+    - cron: "* * * * *"   # best-effort every minute (UTC)
+  workflow_dispatch:
+
+jobs:
+  send-hi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send hi to Discord
+        env:
+          BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import requests
+
+          token = os.environ["BOT_TOKEN"]
+          channel_id = os.environ["CHANNEL_ID"]
+
+          url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+          headers = {
+              "Authorization": f"Bot {token}",
+              "Content-Type": "application/json"
+          }
+
+          response = requests.post(
+              url,
+              headers=headers,
+              json={"content": "hi"}
+          )
+
+          print("Status:", response.status_code)
+          print(response.text)
+          EOF
