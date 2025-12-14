@@ -2,7 +2,7 @@ name: Send Hi Every Minute
 
 on:
   schedule:
-    - cron: "* * * * *"   # best-effort every minute (UTC)
+    - cron: "*/6 * * * *"
   workflow_dispatch:
 
 jobs:
