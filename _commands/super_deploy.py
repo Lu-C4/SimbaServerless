@@ -22,7 +22,7 @@ class SuperDeploy(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
-        print("Respondingggggggg")
+        
         interaction_token = json_data["token"]
         
         username = json_data["data"]["options"][0]["value"]
