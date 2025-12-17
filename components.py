@@ -131,6 +131,33 @@ async def append_skin(
         }
     ).execute()
     
+async def disable_button_by_event(channel_id, message_id):
+    url = f"https://discord.com/api/v10/channels/{channel_id}/messages/{message_id}"
+
+    headers = {
+        "Authorization": f"Bot {os.environ.get('TOKEN')}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "components": [
+            {
+                "type": 1,
+                "components": [
+                    {
+                        "type": 2,
+                        "style": 1,
+                        "label": "Recruit",
+                        "custom_id": "open_text_modal",
+                        "disabled": True
+                    }
+                ]
+            }
+        ]
+    }
+
+    async with httpx.AsyncClient() as client:
+        await client.patch(url, headers=headers, json=payload)
 
         
 class Recruit():
@@ -175,6 +202,10 @@ class Recruit():
                 discord_id=json_data['member']['user']['id'],
                 skin=meta
             )
+            message_id=json_data['message']['id']
+            channel_id=json_data['channel']['id']
+            await disable_button_by_event(channel_id=channel_id,message_id=message_id)
+            
 
             payload={
             "content":f"{json_data['member']['user']['global_name']}, you have recruited {name}, a {tier} tier soldier!"
