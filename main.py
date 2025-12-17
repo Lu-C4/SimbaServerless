@@ -1,5 +1,4 @@
 import uvicorn
-import asyncio
 import httpx
 from fastapi import FastAPI, Request, BackgroundTasks
 from starlette.middleware import Middleware
@@ -39,16 +38,22 @@ async def process_interaction(json_data: dict):
             result = await handler.execute()
 
         # Message components (buttons, selects)
-        elif json_data["type"] == InteractionType.MESSAGE_COMPONENT:
+        elif json_data["type"] == InteractionType.MESSAGE_COMPONENT or json_data["type"]==InteractionType.MODAL_SUBMIT:
             from core import ComponentHandler
-
             handler = ComponentHandler(json_data)
             result = await handler.execute()
+         
+            
+            
 
         # Send handler result if present
         if result:
             await client.post(webhook_url, json=result)
         else:
+            import json
+            with open("sample2.json", "w", encoding="utf-8") as f:
+
+                json.dump(json_data, f, indent=4, sort_keys=True)
             # Fallback message
             await client.post(
                 webhook_url,
@@ -61,7 +66,13 @@ async def process_interaction(json_data: dict):
 
 @app.post("/interactions")
 async def interactions(request: Request, background: BackgroundTasks):
+    # Modals need immediate response
     json_data = await request.json()
+    if json_data.get('data').get('custom_id')=="recruit":
+                
+                from modals import text_input
+                await text_input(json_data)
+                return 
 
     # 1️⃣ PING — respond immediately
     if json_data["type"] == InteractionType.PING:
@@ -74,6 +85,10 @@ async def interactions(request: Request, background: BackgroundTasks):
         "type": InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     }
 
-
+@app.post("/recruit")
+async def recruit():
+    from recruit import sendSoldier
+    await sendSoldier()
+    return "Success",200
 if __name__ == "__main__":
     uvicorn.run(app)

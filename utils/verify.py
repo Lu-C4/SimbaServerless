@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 CLIENT_PUBLIC_KEY = os.environ.get("CLIENT_PUBLIC_KEY")
-
+ENCRYPT_KEY=os.environ.get("ENCRYPT_KEY")
 
 def verify_key(
     raw_body: bytes, signature: str, timestamp: str, client_public_key: str
@@ -37,6 +37,12 @@ async def get_body(request: Request) -> bytes:
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        EXCLUDED_PATHS = ["/recruit"]
+        if request.url.path in EXCLUDED_PATHS:
+            if request.headers["ENCRYPT_KEY"]!=ENCRYPT_KEY:
+                return Response("Bad request signature", status_code=401)
+            return await call_next(request)
+            
         signature = request.headers["X-Signature-Ed25519"]
         timestamp = request.headers["X-Signature-Timestamp"]
         request_body = await get_body(request)

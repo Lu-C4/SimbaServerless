@@ -2,9 +2,11 @@ from commands import commands
 
 
 def get_command(json_data: dict):
+    cmd=json_data["data"]["name"]
     for command in commands:
-        if command.name == json_data["data"]["name"]:
+        if command.name == cmd:
             return command
+    print("Not found",cmd)
     return None
 
 

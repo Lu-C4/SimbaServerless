@@ -3,9 +3,9 @@ from utils import ComponentResponse
 
 def get_fn(json_data: dict):
     for response_function in components:
-        if response_function.name == json_data["data"]["custom_id"]:
+        cmd=json_data["data"]["custom_id"]
+        if response_function.name == cmd:
             return response_function
-    print("Not found")
     return None
 
 

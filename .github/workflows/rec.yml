@@ -1,0 +1,34 @@
+name: Recruit Ping
+
+on:
+  schedule:
+    
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+
+jobs:
+  recruit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call recruit endpoint
+        env:
+          RECRUIT_URL: ${{ secrets.RECRUIT_URL }}
+          ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import requests
+
+          url = os.environ["RECRUIT_URL"]
+          key = os.environ["ENCRYPT_KEY"]
+
+          headers = {
+              "ENCRYPT_KEY": key
+          }
+
+          response = requests.post(url, headers=headers, timeout=10)
+
+          print("Status:", response.status_code)
+          print("Response:", response.text)
+          EOF
