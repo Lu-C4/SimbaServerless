@@ -627,6 +627,10 @@ lxml==6.0.2 \
     --hash=sha256:fb8dae0b6b8b7f9e96c26fdd8121522ce5de9bb5538010870bd538683d30e9a2 \
     --hash=sha256:fbc74f42c3525ac4ffa4b89cbdd00057b6196bcefe8bce794abd42d33a018092
     # via simbaserverless
+mangum==0.21.0 \
+    --hash=sha256:309e48f5c629542516c5106ecf079f4ec08809ed50df882238d98fe1392820c7 \
+    --hash=sha256:e31ed72d67f9958fa4379f65df77729906dec6dfa00afa6ed4e06c77833000de
+    # via simbaserverless
 multidict==6.7.0 \
     --hash=sha256:040f393368e63fb0f3330e70c26bfd336656bed925e5cbe17c9da839a6ab13ec \
     --hash=sha256:05047ada7a2fde2631a0ed706f1fd68b169a681dfe5e4cf0f8e4cb6618bbc2cd \
@@ -1038,6 +1042,7 @@ typing-extensions==4.15.0 \
     #   aiosignal
     #   anyio
     #   fastapi
+    #   mangum
     #   pydantic
     #   pydantic-core
     #   realtime
