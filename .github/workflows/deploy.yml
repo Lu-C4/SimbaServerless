@@ -1,0 +1,58 @@
+name: Deploy Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: simba
+  LAMBDA_FUNCTION: simba
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::858634655596:role/GitHubActionsLambdaDeployRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            -t $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+            .
+
+      - name: Push Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker push \
+            $REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+      - name: Update Lambda
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION \
+            --image-uri $REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+            --publish
