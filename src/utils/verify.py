@@ -50,12 +50,14 @@ async def get_body(request: Request) -> bytes:
 
 class CustomHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        if request.url.path == "/":
+            return Response("Simba is running.", status_code=200)
+               
         if request.url.path == "/recruit":
             provided_key = request.headers.get("ENCRYPT_KEY")
             if not provided_key or not ENCRYPT_KEY or not hmac.compare_digest(provided_key, ENCRYPT_KEY):
                 return Response("Bad request signature", status_code=401)
-            return await call_next(request)
-
+            return await call_next(request)                
         signature = request.headers.get("X-Signature-Ed25519")
         timestamp = request.headers.get("X-Signature-Timestamp")
         request_body = await get_body(request)
