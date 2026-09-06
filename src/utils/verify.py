@@ -5,6 +5,7 @@ import time
 
 from dotenv import load_dotenv
 from fastapi import Request, Response
+from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -30,9 +31,8 @@ def verify_key(
         vk = VerifyKey(bytes.fromhex(client_public_key))
         vk.verify(message, bytes.fromhex(signature))
         return True
-    except (TypeError, ValueError):
+    except (BadSignatureError, TypeError, ValueError):
         return False
-    return False
 
 
 async def set_body(request: Request, body: bytes):

@@ -1,7 +1,7 @@
 import httpx
 import logging
 import uvicorn
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, Request, Response
 from starlette.middleware import Middleware
 
 from .utils import (
@@ -11,8 +11,24 @@ from .utils import (
     CustomHeaderMiddleware,
 )
 
-app = FastAPI(middleware=[Middleware(CustomHeaderMiddleware)])
+app = FastAPI(
+    middleware=[Middleware(CustomHeaderMiddleware)]
+    )
 logger = logging.getLogger(__name__)
+DISCORD_TIMEOUT = httpx.Timeout(2.0, connect=1.0)
+
+
+async def acknowledge_interaction(json_data: dict) -> None:
+    callback_url = (
+        f"https://discord.com/api/v10/interactions/"
+        f"{json_data['id']}/{json_data['token']}/callback"
+    )
+    async with httpx.AsyncClient(timeout=DISCORD_TIMEOUT) as client:
+        response = await client.post(
+            callback_url,
+            json={"type": InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE},
+        )
+        response.raise_for_status()
 
 
 async def process_interaction(json_data: dict):
@@ -61,7 +77,7 @@ async def process_interaction(json_data: dict):
             response.raise_for_status()
 
 
-@app.post("/default/interactions")
+@app.post("/interaction")
 async def interactions(request: Request, background: BackgroundTasks):
     # Modals need immediate response
     json_data = await request.json()
@@ -74,12 +90,11 @@ async def interactions(request: Request, background: BackgroundTasks):
                 return None
 
 
-    # 2️⃣ ACK immediately (DEFER)
+    # Acknowledge through Discord before Lambda starts background processing.
+    await acknowledge_interaction(json_data)
     background.add_task(process_interaction_safely, json_data)
 
-    return {
-        "type": InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-    }
+    return Response(status_code=204)
 
 
 async def process_interaction_safely(json_data: dict) -> None:
@@ -87,6 +102,7 @@ async def process_interaction_safely(json_data: dict) -> None:
         await process_interaction(json_data)
     except Exception:
         logger.exception("Failed to process Discord interaction")
+
 
 @app.post("/recruit")
 async def recruit():
