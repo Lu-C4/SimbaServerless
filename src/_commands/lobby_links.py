@@ -1,9 +1,15 @@
 from . import send_followup
+
 import asyncio
+
 import httpx
+
 import cloudscraper
+
 import json
+
 import re
+
 import random
 
 from ..utils import SlashCommand
@@ -15,10 +21,82 @@ BUNDLE_URL = "https://ev.io/dist/1-7-0/public/bundle.js"
 def getCount(url: str) -> str:
     try:
         scraper = cloudscraper.create_scraper()
-        r = scraper.get(f"{url}players{random.random()}", timeout=5)
+        r = scraper.get(
+            f"{url}players{random.random()}",
+            timeout=5
+        )
         return str(json.loads(r.text)["playerCount"])
     except Exception:
         return "N/A"
+
+
+async def fetch_lobby_links():
+    """
+    Fetch active lobbies and their player counts.
+
+    Returns:
+        List of dictionaries containing:
+        region, url, player_count, id, gamemode
+    """
+
+    # ---------------------------
+    # Fetch lobby list
+    # ---------------------------
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(BUNDLE_URL)
+
+    match = re.search(
+        r'(\[\s*\{"id":"lobby-.*?\}\s*\])',
+        r.text,
+        re.DOTALL
+    )
+
+    if not match:
+        return []
+
+    data = json.loads(match.group(1))
+
+    # ---------------------------
+    # Prepare URLs
+    # ---------------------------
+
+    urls = [
+        game["connectionUrl"].replace("wss", "https")
+        for game in data
+    ]
+
+    # ---------------------------
+    # Fetch player counts
+    # ---------------------------
+
+    semaphore = asyncio.Semaphore(16)
+
+    async def fetch_count(url):
+        async with semaphore:
+            return await asyncio.to_thread(
+                getCount,
+                url
+            )
+
+    counts = await asyncio.gather(
+        *(fetch_count(url) for url in urls)
+    )
+
+    # ---------------------------
+    # Return useful information
+    # ---------------------------
+
+    return [
+        {
+            "region": game["region"],
+            "url": url,
+            "player_count": count,
+            "id": game["id"],
+            "gamemode": game["gamemode"],
+        }
+        for game, url, count in zip(data, urls, counts)
+    ]
 
 
 class LobbyLinks(SlashCommand):
@@ -31,69 +109,51 @@ class LobbyLinks(SlashCommand):
         )
 
     async def respond(self, json_data: dict):
+
         interaction_token = json_data["token"]
 
         # ---------------------------
-        # Fetch lobby list (async once)
+        # Fetch lobby information
         # ---------------------------
-        async with httpx.AsyncClient() as client:
-            r = await client.get(BUNDLE_URL)
 
-        match = re.search(
-            r'(\[\s*\{"id":"lobby-.*?\}\s*])',
-            r.text,
-            re.DOTALL
-        )
-        if not match:
+        lobbies = await fetch_lobby_links()
+
+        if not lobbies:
             await send_followup(
                 interaction_token=interaction_token,
-                payload={"content": "Lobby data is temporarily unavailable."},
+                payload={
+                    "content": "Lobby data is temporarily unavailable."
+                },
             )
             return
-        data = json.loads(match.group(1))
 
         # ---------------------------
-        # Prepare URLs (NO extra work)
+        # Formatting
         # ---------------------------
-        urls = [
-            game["connectionUrl"].replace("wss", "https")
-            for game in data
-        ]
 
-        # ---------------------------
-        # THREADPOOL — FULL BLAST
-        # ---------------------------
-        semaphore = asyncio.Semaphore(16)
-
-        async def fetch_count(url):
-            async with semaphore:
-                return await asyncio.to_thread(getCount, url)
-
-        counts = await asyncio.gather(*(fetch_count(url) for url in urls))
-            
-        # ---------------------------
-        # Formatting AFTER network
-        # ---------------------------
         msg1 = ""
         msg2 = ""
+
         seen = []
         k = 0
 
-        for game, count in zip(data, counts):
-            gm = game["gamemode"]
+        for lobby in lobbies:
+
+            gm = lobby["gamemode"]
 
             if gm not in seen:
                 seen.append(gm)
                 k += 1
+
                 if k > 5:
                     msg2 += f"\n{gm}"
                 else:
                     msg1 += f"\n{gm}"
 
             line = (
-                f"\n\t\t{game['region']} "
-                f"<https://ev.io/?game={game['id']}> "
-                f"[players: {count}]"
+                f"\n\t\t{lobby['region']} "
+                f"[ev.io 🔗](<https://ev.io/?game={lobby['id']}>) "
+                f"[players: {lobby['player_count']}]"
             )
 
             if k > 5:
@@ -104,6 +164,7 @@ class LobbyLinks(SlashCommand):
         # ---------------------------
         # Send
         # ---------------------------
+
         if msg1:
             await send_followup(
                 interaction_token=interaction_token,
