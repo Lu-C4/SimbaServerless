@@ -25,7 +25,11 @@ class LobbyLinks(SlashCommand):
         # ---------------------------
         # Send
         # ---------------------------
-        
+
+        DISCORD_LIMIT = 4000
+        COMPONENT_LIMIT = 40
+        COMPONENTS_V2 = 1 << 15
+
         PRIORITY_MODES = {
             "deathmatch_earn",
             "survival_earn",
@@ -35,82 +39,145 @@ class LobbyLinks(SlashCommand):
             "sniper_shotgun",
         }
 
-        DISCORD_LIMIT = 2000
-
 
         def format_mode(mode):
             return mode.replace("_", " ").title()
 
 
-        def chunk_discord_message(lines, limit=DISCORD_LIMIT):
-            """Split lines into Discord messages without exceeding the limit."""
-            chunks = []
-            current = ""
+        def build_region_container(region, games, selected_modes=None):
+            """Build one visually grouped container for a region."""
 
-            for line in lines:
-                # Account for the newline between lines.
-                separator = "\n" if current else ""
-                candidate = current + separator + line
+            lines = [f"### {region.upper()}"]
 
-                if len(candidate) > limit:
-                    if current:
-                        chunks.append(current)
-                        current = line
-                    else:
-                        raise ValueError(
-                            f"Single line exceeds Discord limit: {len(line)} characters"
-                        )
-                else:
-                    current = candidate
+            for game in games:
+                mode, url = next(iter(game.items()))
 
-            if current:
-                chunks.append(current)
+                if selected_modes is not None and mode not in selected_modes:
+                    continue
 
-            return chunks
+                lines.append(f"• [{format_mode(mode)}]({url})")
+
+            if len(lines) == 1:
+                return None
+
+            return {
+                "type": 17,  # Container
+                "components": [
+                    {
+                        "type": 10,  # Text Display
+                        "content": "\n".join(lines)
+                    }
+                ]
+            }
 
 
-        def generate_discord_messages(links):
-            priority_lines = []
-            remaining_lines = []
+        def generate_component_payloads(links, selected_modes=None):
+            """Build and chunk Components V2 payloads."""
+
+            payloads = []
+            components = []
+            text_length = 0
+
+            def flush():
+                nonlocal components, text_length
+
+                if not components:
+                    return
+
+                payloads.append({
+                    "flags": COMPONENTS_V2,
+                    "components": components
+                })
+
+                components = []
+                text_length = 0
 
             for region_data in links:
                 region, games = next(iter(region_data.items()))
 
-                priority_lines.append(f"### {region.upper()}")
-                remaining_lines.append(f"### {region.upper()}")
+                container = build_region_container(
+                    region,
+                    games,
+                    selected_modes
+                )
 
-                for game in games:
-                    mode, url = next(iter(game.items()))
+                if container is None:
+                    continue
 
-                    line = f"• [{format_mode(mode)}]({url})"
+                content_length = len(
+                    container["components"][0]["content"]
+                )
 
-                    if mode in PRIORITY_MODES:
-                        priority_lines.append(line)
-                    else:
-                        remaining_lines.append(line)
+                # Each region container has 2 components:
+                # Container + Text Display.
+                if (
+                    text_length + content_length > DISCORD_LIMIT
+                    or len(components) + 2 > COMPONENT_LIMIT
+                ):
+                    flush()
 
-                priority_lines.append("")
-                remaining_lines.append("")
+                components.append(container)
+                text_length += content_length
 
-            return (
-                chunk_discord_message(priority_lines),
-                chunk_discord_message(remaining_lines)
+            flush()
+
+            return payloads
+
+
+        def generate_messages(links):
+            priority = generate_component_payloads(
+                links,
+                PRIORITY_MODES
             )
 
-
-        # Generate messages
-        priority_messages, remaining_messages = generate_discord_messages(links)
-
-        for message in remaining_messages:
-                    await send_followup(
-                        interaction_token=interaction_token,
-                        payload={"content": message}
-                    )
-                
-        for message in priority_messages:
-            await send_followup(
-                interaction_token=interaction_token,
-                payload={"content": message}
+            remaining = generate_component_payloads(
+                links,
+                None
             )
-            
-        return
+
+            # Remove priority modes from the second set.
+            remaining = generate_component_payloads(
+                links,
+                set(
+                    mode
+                    for region in links
+                    for game in next(iter(region.values()))
+                    for mode in game
+                ) - PRIORITY_MODES
+            )
+
+            return priority, remaining
+
+        
+        def generate_messages(links):
+            all_modes = {
+                mode
+                for region in links
+                for game in next(iter(region.values()))
+                for mode in game
+            }
+
+            priority = generate_component_payloads(
+                links,
+                PRIORITY_MODES
+            )
+
+            remaining = generate_component_payloads(
+                links,
+                all_modes - PRIORITY_MODES
+            )
+
+            return priority, remaining
+
+
+        # Generate payloads
+        priority, remaining = generate_messages(links)
+
+        async def publish_lobbies(interaction_token):
+            for payload in remaining:
+                await send_followup(interaction_token, payload)
+
+            for payload in priority:
+                await send_followup(interaction_token, payload)
+
+        await publish_lobbies(interaction_token=interaction_token)
