@@ -359,7 +359,7 @@ async def get_lobby_id(client, region, mode, semaphore):
             response.raise_for_status()
 
             data = response.json()
-            return mode, f"https://ev.io/game={data['id']}"
+            return mode, f"https://ev.io/?game={data['id']}"
 
         except httpx.ConnectError as e:
             print(f"Connection failed: {url} | {e}")
